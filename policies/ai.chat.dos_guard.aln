@@ -1,0 +1,14 @@
+aln system BioAugPolicies {
+  policy ai_chat_dos_guard {
+    dpia: true;
+    // AI/agentic DoS protection
+    traceability {
+      hazard_id: "HAZ-AI-DOS-001";
+      iso14971_clause: "7.4,7.5";
+      iec62304_class: "C";
+      rationale: "Prevent AI/agent-driven DOS affecting clinical or critical smart-city services";
+    }
+    tags: ["actuat_like","critical_service","ai","dos_guard"];
+    rule enforce: rate_limit && anomaly_detection && sandbox_suspicious_sessions;
+  } end policy
+} end system

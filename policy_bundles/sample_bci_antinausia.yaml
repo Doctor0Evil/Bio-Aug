@@ -1,0 +1,19 @@
+bundle_id: bgp-bci-anti-nausea-2025-0001
+version: 0.1.0
+aln_hash: "5ac6e1b0d9a809f1b7b0f..."
+issuer: did:example:clinic-001
+issued_at: '2025-12-10T12:34:56Z'
+metadata:
+  description: "Anti‑nausea BCI VagalComfortLoop profile (rescue/preventive)"
+signatures:
+  - type: CLINICAL_POLICY
+    signer: did:example:clinician-1
+    sig: "BASE64SIG_CLINICAL"
+  - type: SECURITY_POLICY
+    signer: did:example:security-1
+    sig: "BASE64SIG_SECURITY"
+deployment_targets:
+  - mode: Mode.ClinicProcedure
+    target: clinic-backend-1
+  - mode: Mode.ResearchSandbox
+    target: research-sandbox-1

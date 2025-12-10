@@ -1,0 +1,10 @@
+policy ai.chat.dos_guard {
+  traceability {
+    hazard_id       = 'HAZ-AI-DOS-001'
+    iso14971_clause = '7.4,7.5'
+    iec62304_class  = 'C'
+    rationale       = 'Prevent AI/agent DoS on clinical and smart-city critical services'
+    dpia            = true
+  }
+  condition { rate_limit && anomaly_detection && sandbox_suspicious_sessions }
+}

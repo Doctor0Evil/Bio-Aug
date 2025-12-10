@@ -1,0 +1,110 @@
+aln dataset NanoNeuro.Datasets.v2
+
+record Subject {
+  id         : string
+  species    : string
+  condition  : string
+  age_weeks  : u16
+}
+
+record ConsentRecord {
+  subject_id : string
+  consent_id : string
+  scope      : string   # 'clinical','research','urban'
+  expires_on : string
+  revoked    : bool
+}
+
+record Stimulus {
+  id         : string
+  env_id     : string
+  modality   : string
+  freq_hz    : f32
+  intensity  : f32
+  pulse_ms   : f32
+  duty_cycle : f32
+  pulses     : u32
+}
+
+record Session {
+  id         : string
+  subject_id : string
+  env_id     : string
+  consent_id : string
+  start_time : string
+  end_time   : string
+}
+
+record SpikeEvent {
+  session_id : string
+  channel_id : u16
+  t_us       : u64
+  amplitude  : f32
+}
+
+record LFPTrace {
+  session_id : string
+  channel_id : u16
+  fs_hz      : f32
+  data_uri   : string
+}
+
+record BehaviorLabel {
+  session_id : string
+  t_start_us : u64
+  t_end_us   : u64
+  label      : string
+}
+
+record SafetyOutcome {
+  session_id      : string
+  delta_t_max     : f32
+  energy_session  : f32
+  ssi             : f32
+  efficacy_score  : f32
+  viability_pct   : f32
+  failure_mode    : string  # 'none','overheat','off_target','no_effect','excess_excitation'
+}
+
+record Provenance {
+  data_uri     : string
+  device_id    : string
+  firmware_ver : string
+  signed_by    : string
+  timestamp    : string
+}
+
+policy dataset.provenance_and_consent {
+  forall sess in Session, c in ConsentRecord where sess.consent_id == c.consent_id:
+    assert c.revoked == false;
+    assert c.scope != '';
+}
+
+policy dataset.provenance_sanity {
+  forall p in Provenance:
+    assert p.data_uri != '';
+    assert p.device_id != '';
+    assert p.signed_by != '';
+}
+
+policy dataset.safety_outcome_sanity {
+  forall o in SafetyOutcome:
+    assert o.delta_t_max >= 0.0;
+    assert o.energy_session >= 0.0;
+    assert o.ssi >= 0.0;
+    assert o.viability_pct >= 0.0 && o.viability_pct <= 100.0;
+    assert o.failure_mode == 'none' || o.failure_mode == 'overheat' || o.failure_mode == 'off_target' || o.failure_mode == 'no_effect' || o.failure_mode == 'excess_excitation';
+}
+
+policy dataset.basic_sanity_v2 {
+  forall s in Stimulus:
+    assert s.duty_cycle >= 0.0 && s.duty_cycle <= 1.0;
+
+  forall e in SpikeEvent:
+    assert e.t_us >= 0;
+
+  forall l in BehaviorLabel:
+    assert l.t_end_us > l.t_start_us;
+}
+
+end dataset

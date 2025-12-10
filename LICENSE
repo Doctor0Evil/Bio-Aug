@@ -1,0 +1,24 @@
+**NO CLINICAL USE WITHOUT REGULATORY CLEARANCE**
+
+**This repository is intended for research, simulation, and reference purposes only. Any deployment that interacts with biological tissue, BCI devices, or medical implants requires regulatory approvals (e.g., FDA, EU MDR), clinical trials, and certified hardware. The repository authors and maintainers are not responsible for clinical use or outcomes.**
+
+
+Copyright 2025 Doctor0Evil
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
+---
+
+**Research/simulation-first intent**: This repository contains research artifacts, not clinical instructions. Any real-world clinical or hardware deployment must be preceded by formal governance review, regulatory approval, and clinically supervised human trials.
+
+**Users are responsible for regulatory compliance**: Implementers of hardware and software that adapt elements of this repository are responsible for complying with jurisdictional regulatory frameworks such as FDA (US), EU MDR (EU), PMDA (Japan), and TGA (Australia), including cybersecurity and post-market surveillance mandates.

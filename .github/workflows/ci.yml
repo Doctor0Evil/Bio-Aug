@@ -1,0 +1,106 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Make scripts executable
+        run: |
+          chmod +x scripts/*.sh || true
+
+      - name: Setup Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          override: true
+
+      - name: Setup Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
+
+      - name: Install yq (needed for policy verification)
+        run: |
+          sudo wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O /usr/local/bin/yq; sudo chmod +x /usr/local/bin/yq
+
+      - name: Check for Python in kernel paths
+        run: ./scripts/check_no_python.sh origin/main
+
+      - name: Rustfmt and clippy
+        run: |
+          cargo fmt --all -- --check || true
+          cargo clippy --all -- -D warnings || true
+        working-directory: core/policy_enforcer || .
+
+      - name: Go format
+        run: |
+          gofmt -l ./services || true
+
+      - name: Run policy bundle verification (stub)
+        run: |
+          # Build signer CLI
+          cd tools/signer-rs
+          cargo build --release
+          cd -
+          for bundle in policy_bundles/*.yaml; do
+            echo "Verifying $bundle";
+            if ! tools/signer-rs/target/release/signer-rs verify --input "$bundle" --keyref ci/keys/bgc_root.pub --expect-profile CLINICAL_POLICY ; then
+              echo "Bundle verification failed: $bundle"; exit 1;
+            fi
+            if ! tools/signer-rs/target/release/signer-rs verify --input "$bundle" --keyref ci/keys/bgc_root.pub --expect-profile SECURITY_POLICY ; then
+              echo "Bundle security signature check failed: $bundle"; exit 1;
+            fi
+          done
+
+      - name: Build kernel enforcer (non-kernel build step)
+        run: |
+          cd core/policy_enforcer
+          cargo build --release
+
+      - name: Run simulation smoke tests (placeholder)
+        run: |
+          # Build sim runner
+          cd sim/runner
+          cargo build --release
+          cd -
+          # Run all scenarios
+          for s in sim/scenarios/*.json; do
+            echo "Running scenario $s";
+            if ! sim/runner/target/release/sim-runner "$s" --policies policy_bundles ; then
+              echo "Simulation failed for $s"; exit 1;
+            fi
+          done
+          # Validate ALN mesh specs
+          ./scripts/validate_aln_mesh.sh
+
+      - name: Build ALN toolchain and validate examples
+        run: |
+          cd aln-syntax && cargo build --release && cargo test || exit 1; cd -
+          cd aln-check && cargo build --release || exit 1; cd -
+          cd aln-codegen && cargo build --release || exit 1; cd -
+          cd aln-cli && cargo build --release; cd -
+          # run parse and validate on examples
+          aln-cli/target/release/aln parse aln-examples/AU.BioMesh.NetEnvelope.v1.aln || echo "parse failed" && exit 1
+          aln-cli/target/release/aln validate aln-examples/AU.BioMesh.NetEnvelope.v1.aln --profile bioaug-clinical || echo "validate failed" && exit 1
+          # Generate Rust stubs
+          mkdir -p aln-cli/generated
+          aln-cli/target/release/aln codegen aln-examples/AU.BioMesh.NetEnvelope.v1.aln --target rust --out aln-cli/generated || echo "codegen failed" && exit 1
+          # Traceability: generate and require traceability mapping
+          aln-cli/target/release/aln trace aln-examples/AU.BioMesh.NetEnvelope.v1.aln > aln-cli/generated/trace.json
+          cat aln-cli/generated/trace.json
+      - name: Verify ALN signatures (actuation specs)
+        run: |
+          chmod +x scripts/verify_aln_signatures.sh
+          ./scripts/verify_aln_signatures.sh

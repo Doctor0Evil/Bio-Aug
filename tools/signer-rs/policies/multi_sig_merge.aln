@@ -1,0 +1,6 @@
+aln system signer_policies {
+  policy multi_sig_merge {
+    traceability { hazard_id: "HAZ-SIGN-001"; iso14971_clause: "5.3"; iec62304_class: "C"; rationale: "Merge multiple signatures into a single sidecar"; }
+    rule enforce: merge_signature_sidecar;
+  } end policy
+} end system

@@ -1,0 +1,21 @@
+object BCI.VagalComfortLoop.AntiNauseaProfile
+  role "Vagal stimulation profile for anti-nausea rescue and preventive modes"
+  material: "medical-grade, ISO 10993 compliant" 
+  constraints
+    - read_mode_only true
+    - physician_programmable_only true
+    - HITL_override_required true
+  stimulation_bounds
+    amplitude_mA_range 0.0-1.5
+    pulse_width_us_range 50-250
+    frequency_hz_range 5-25
+  actuators
+    - vagal_stim_channel
+  policies
+    - require ETHCORE.system.audit.enabled true
+    - require CLINICAL_POLICY.signature present
+    - require SECURITY_POLICY.signature present
+  safety
+    - log_all_sessions true
+    - if nausea_score >= 7 then mode = "rescue" and require double_signature true
+end

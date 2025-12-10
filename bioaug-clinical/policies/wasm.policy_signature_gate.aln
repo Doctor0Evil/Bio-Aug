@@ -1,0 +1,10 @@
+policy wasm.policy_signature_gate {
+  traceability {
+    hazard_id       = 'HAZ-CONFIG-TAMPER-001'
+    iso14971_clause = '7.4'
+    iec62304_class  = 'C'
+    rationale       = 'Block unsigned / profile-mismatched policies from entering WASM sandbox'
+    dpia            = true
+  }
+  condition { sidecar_sig_present && verify_clinical && verify_security && profile_match }
+}

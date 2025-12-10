@@ -1,0 +1,73 @@
+aln dataset NanoNeuro.NeuromorphicClinical.v1
+
+record Subject {
+  id         : string
+  species    : string
+  condition  : string
+  age_weeks  : u16
+}
+
+record Session {
+  id         : string
+  subject_id : string
+  env_id     : string
+  consent_id : string
+  start_time : string
+  end_time   : string
+}
+
+record Stimulus {
+  id         : string
+  env_id     : string
+  modality   : string
+  freq_hz    : f32
+  intensity  : f32
+  pulse_ms   : f32
+  duty_cycle : f32
+  pulses     : u32
+}
+
+record SpikeEvent {
+  session_id : string
+  channel_id : u16
+  t_us       : u64
+  amplitude  : f32
+}
+
+record LFPTrace {
+  session_id : string
+  channel_id : u16
+  fs_hz      : f32
+  data_uri   : string
+}
+
+record BehaviorLabel {
+  session_id : string
+  t_start_us : u64
+  t_end_us   : u64
+  label      : string
+}
+
+record NeuromorphicWindow {
+  id           : string
+  session_id   : string
+  window_start : u64
+  window_end   : u64
+  target_label : string
+}
+
+policy neuromorphic_clinical_sanity {
+  forall s in Stimulus:
+    assert s.duty_cycle >= 0.0 && s.duty_cycle <= 1.0;
+
+  forall e in SpikeEvent:
+    assert e.t_us >= 0;
+
+  forall l in BehaviorLabel:
+    assert l.t_end_us > l.t_start_us;
+
+  forall w in NeuromorphicWindow:
+    assert w.window_end > w.window_start;
+}
+
+end dataset

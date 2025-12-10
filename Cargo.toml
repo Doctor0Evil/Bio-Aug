@@ -1,0 +1,14 @@
+[workspace]
+members = [
+    "aln-syntax",
+    "aln-check",
+    "aln-codegen",
+    "aln-cli",
+    "tools/signer-rs",
+    "sim/runner",
+]
+
+[package]
+name = "bio-aug-root"
+version = "0.1.0"
+edition = "2021"

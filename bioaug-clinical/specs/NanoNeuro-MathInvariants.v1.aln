@@ -1,0 +1,46 @@
+aln dataset NanoNeuro.MathInvariants.v1
+
+# Neuromodulation: L <= S(t) <= U, ∫ S^2(t) dt < E_damage, ΔT_max <= ΔT_safe, SSI >= SSI_min. [web:10][web:15]
+
+record NeuromodEnvInvariant {
+  id             : string
+  s_lower        : f32
+  s_upper        : f32
+  e_damage       : f32
+  delta_t_safe   : f32
+  ssi_min        : f32
+}
+
+record NeuromodSample {
+  env_id         : string
+  s_value        : f32
+  s_squared_dt   : f32
+  delta_t        : f32
+  ssi            : f32
+}
+
+policy neuromod.math_invariants {
+  forall x in NeuromodSample, env in NeuromodEnvInvariant where x.env_id == env.id:
+    assert x.s_value >= env.s_lower && x.s_value <= env.s_upper;
+    assert x.s_squared_dt < env.e_damage;
+    assert x.delta_t <= env.delta_t_safe;
+    assert x.ssi >= env.ssi_min;
+}
+
+# Hybrid AI–human reliability: R_hybrid = 1 - (1 - R_ai)(1 - R_human) >= R_target. [web:8][web:16]
+
+record HybridReliabilityInvariant {
+  controller_id   : string
+  r_ai            : f32
+  r_human         : f32
+  r_target        : f32
+}
+
+policy hybrid.reliability_invariant {
+  forall h in HybridReliabilityInvariant:
+    let one = 1.0;
+    let r_hybrid = one - (one - h.r_ai) * (one - h.r_human);
+    assert r_hybrid >= h.r_target;
+}
+
+end dataset

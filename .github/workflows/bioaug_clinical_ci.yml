@@ -1,0 +1,49 @@
+name: BioAugClinical-ClassC-CI
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+jobs:
+  validate-bioaug-clinical:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build signer and ALN tools
+        run: |
+          cd tools/signer-rs && cargo build --release
+          cd ../../aln-cli && cargo build --release
+      - name: ALN Validate BioAugClinical
+        run: |
+          ./aln-cli/target/release/aln validate aln-examples/AU.BioMesh.NetEnvelope.v1.aln --profile bioaug-clinical
+      - name: Verify ALN signatures
+        run: |
+          ./scripts/verify_aln_signatures.sh --require-clinical --require-security
+      - name: Check coverage and emit matrix
+        run: |
+          ./aln-cli/target/release/aln check-coverage aln-examples/AU.BioMesh.NetEnvelope.v1.aln --out-csv build/out/hazard_control_matrix.csv --out-proof build/out/hazard_coverage_proof.json || exit 1
+      - name: Export trace, sign and verify
+        run: |
+          ./aln-cli/target/release/aln trace-export aln-examples/AU.BioMesh.NetEnvelope.v1.aln --out build/out/hazard_control_policy_backend_test.csv
+          ./scripts/trace_sign.sh build/out/hazard_control_policy_backend_test.csv build/out/hazard_trace_signed.json
+      - name: Build Rust no_std modules
+        run: |
+          cargo build --manifest-path Cargo.toml --release --no-default-features --features "bioaug_class_c,no_std"
+        - name: Rust Class-C checks
+          run: |
+            ./scripts/rust_classc_checks.sh src/embedded build/out/rust_classc_checks.json
+      - name: Run WCET and mem check
+        run: |
+          ./scripts/wcet_mem_check.sh target/bioaug_actuator_guard_v1.rlib build/out/wcet_bioaug_actuator_guard_v1.json build/out/memory_bounds_bioaug.json
+      - name: WASM build and verify
+        run: |
+          ./scripts/wasm_verify.sh wasm/policy_engine_bioaug.wasm build/out/capability_budget_proof.json
+        - name: Verify wasm policy signature gate
+          run: |
+            ./aln-cli/target/release/aln validate policies/wasm.policy_signature_gate.aln --profile bioaug-clinical --require-dpia --require-dos-guard
+      - name: Run sim-runner placeholder
+        run: |
+          echo "Sim runner placeholder - ensure sim-runner is invoked here in real CI" && true

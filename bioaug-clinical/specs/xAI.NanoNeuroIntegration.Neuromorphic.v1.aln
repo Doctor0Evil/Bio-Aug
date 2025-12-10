@@ -1,0 +1,47 @@
+aln dataset xAI.NanoNeuroIntegration.Neuromorphic.v1
+
+record Subject {
+  id         : string
+  species    : string
+  condition  : string
+  age_weeks  : u16
+}
+
+record SpikeEvent {
+  session_id : string
+  channel_id : u16
+  t_us       : u64
+  amplitude_uV : f32
+}
+
+record LFPTrace {
+  session_id : string
+  channel_id : string
+  fs_hz      : f32
+  data_uri   : string
+}
+
+record BehaviorLabel {
+  session_id : string
+  t_start_us : u64
+  t_end_us   : u64
+  label      : string
+}
+
+record TrainingExample {
+  id           : string
+  session_id   : string
+  window_start_us : u64
+  window_end_us   : u64
+  target_label : string
+}
+
+policy neuromorphic.data_sanity {
+  forall e in SpikeEvent:
+    assert e.t_us >= 0;
+
+  forall l in BehaviorLabel:
+    assert l.t_end_us > l.t_start_us;
+}
+
+end dataset

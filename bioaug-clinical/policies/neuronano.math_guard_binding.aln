@@ -1,0 +1,13 @@
+policy neuronano.math_guard_binding {
+  traceability {
+    hazard_id       = 'HAZ-NANO-MATH-001'
+    iso14971_clause = '7.4,7.5'
+    iec62304_class  = 'C'
+    rationale       = 'Bind formal neuromodulation invariants (S, energy, ΔT, SSI) to runtime Rust guards'
+    dpia            = true
+  }
+  # Binding is realized by codegen/config, this block documents Class C-level intent.
+  condition { math_invariants_and_rust_guards_aligned }
+  # Implementation note: the canonical runtime guards are provided by the `neuronano-guards` crate:
+  #   "bioaug-clinical/rust/neuronano-guards"
+}

@@ -1,0 +1,15 @@
+policy pillar2.nanotech_bmi_flex_interfaces {
+  traceability {
+    hazard_id       = 'HAZ-NANOBMI-001'
+    iso14971_clause = '7.4,7.5,9.2'
+    iec62304_class  = 'C'
+    rationale       = 'Nanotech BMIs and flexible interfaces must align mech/electrical properties with tissue and respect neuro-rights'
+    dpia            = true
+  }
+  # Flexible nanomaterial-based interfaces, 3D brain-on-chip, plus ethics/jurisprudence requirements. [web:2]
+  condition {
+    mechanical_compliance_ok &&
+    impedance_snr_in_bounds &&
+    neuro_rights_impact_assessed
+  }
+}

@@ -1,0 +1,242 @@
+aln spec AU.BioMesh.NetEnvelope.v1
+  purpose "Mathematically-rigorous, malware-impossible bio-mesh network instances for cybernetic / augmented humans, using ALN-safe syntax and regex-stable patterns." [file:7][file:8]
+
+  ########################
+  ## 0. GLOBAL INVARIANTS
+  ########################
+
+  invariant inv.NO_REMOTE_EXEC
+    # No remote party can execute code on any bio-mesh node.
+    forall conn in NetLink:
+      assert conn.remote_exec_cap == 0u8
+  end
+
+  invariant inv.NO_INBOUND_WRITE
+    # No inbound packet can write to biomechanical state.
+    forall sess in BioMeshSession:
+      assert sess.inbound_write_cap == 0u8
+  end
+
+  invariant inv.OFFLINE_ONLY
+    # All meshes are physically and logically air-gapped from the internet.
+    forall iface in BioMeshIface:
+      assert iface.net_scope == SCOPE_LOCAL
+      assert iface.has_ip_stack == 0u8
+  end
+
+  ########################
+  ## 1. ENUMS & BITFIELDS
+  ########################
+
+  enum MeshRole : u8
+    MESH_SENSE   = 1
+    MESH_ACT     = 2
+    MESH_MIXED   = 3
+  end
+
+  enum Scope : u8
+    SCOPE_LOCAL  = 0   # intra-body / intra-room only
+    SCOPE_EDGE   = 1   # local edge compute (no WAN)
+  end
+
+  bitfield MeshFlags : u16
+    FLAG_NO_RF_TX         = 0   # no radio transmitter present
+    FLAG_HARD_AIRGAP      = 1   # no physical path to WAN
+    FLAG_READ_ONLY_CTRL   = 2   # host can only read, never write actuators
+    FLAG_FORMAL_VERIFIED  = 3   # proofs attached
+    FLAG_FIPS_CRYPTO      = 4   # approved crypto only
+  end
+
+  bitfield LinkFlags : u16
+    LFLAG_AUTH_MUTUAL     = 0
+    LFLAG_ENC_STRONG      = 1
+    LFLAG_NO_BCAST        = 2
+    LFLAG_NO_FORWARD      = 3
+    LFLAG_NO_REMOTE_EXEC  = 4
+  end
+
+  ########################
+  ## 2. CORE BIO-MESH TYPES
+  ########################
+
+  record BioMeshIface
+    mesh_id_hash    : u64     # hash of physical design + firmware
+    user_id_hash    : u64
+    role            : MeshRole
+    net_scope       : Scope
+    flags           : MeshFlags
+    chan_sense_max  : u16
+    chan_act_max    : u16
+    bw_kbps_max     : u32
+    jitter_us_max   : u32
+    latency_ms_max  : u16
+    has_ip_stack    : u8      # must be 0 to satisfy OFFLINE_ONLY
+    reserved[7]     : u8
+  end
+
+  record BioMeshSession
+    session_id      : u64
+    mesh_id_hash    : u64
+    ts_open_ms      : u64
+    ts_close_ms     : u64
+    pkt_in_count    : u32
+    pkt_out_count   : u32
+    bytes_in        : u64
+    bytes_out       : u64
+    inbound_write_cap : u8    # must be 0 to satisfy NO_INBOUND_WRITE
+    reserved[7]     : u8
+  end
+
+  record NetLink
+    link_id         : u64
+    mesh_a_hash     : u64
+    mesh_b_hash     : u64
+    flags           : LinkFlags
+    remote_exec_cap : u8      # must be 0 to satisfy NO_REMOTE_EXEC
+    hop_count_max   : u8      # must be 1 (no routing)
+    phy_medium_code : u16     # e.g. 1 = optical, 2 = wired differential
+    bw_kbps         : u32
+    reserved[6]     : u8
+  end
+
+  ########################
+  ## 3. PARAMETER CONSTRAINTS
+  ########################
+
+  policy mesh.PARAM_BOUNDS
+    forall m in BioMeshIface:
+      assert m.bw_kbps_max <= 256u32      # low, deterministic bandwidth
+      assert m.jitter_us_max <= 500u32
+      assert m.latency_ms_max <= 20u16
+      assert (m.flags & FLAG_NO_RF_TX) != 0
+      assert (m.flags & FLAG_HARD_AIRGAP) != 0
+      assert (m.flags & FLAG_READ_ONLY_CTRL) != 0
+      assert m.has_ip_stack == 0u8
+  end
+
+  policy link.PARAM_BOUNDS
+    forall l in NetLink:
+      assert (l.flags & LFLAG_AUTH_MUTUAL) != 0
+      assert (l.flags & LFLAG_ENC_STRONG) != 0
+      assert (l.flags & LFLAG_NO_BCAST) != 0
+      assert (l.flags & LFLAG_NO_FORWARD) != 0
+      assert (l.flags & LFLAG_NO_REMOTE_EXEC) != 0
+      assert l.remote_exec_cap == 0u8
+      assert l.hop_count_max == 1u8
+  end
+
+  ########################
+  ## 4. BIO-MESH “INSTANCE CALCULATOR”
+  ########################
+
+  # Deterministic function to “calculate” valid instances from user + biomech profile.
+
+  function calc_mesh_instances(user_level : u8, n_regions : u8) : BioMeshIface[]
+    let base_bw : u32 = 64u32
+    let base_sense : u16 = 32u16
+    let base_act : u16 = 8u16
+
+    let level_scale : u32 = match user_level
+      0u8 -> 1u32
+      1u8 -> 2u32
+      2u8 -> 4u32
+      _   -> 4u32
+    end
+
+    let count : u8 = n_regions
+    let meshes[count]
+
+    for i in 0u8 ..< count:
+      let bw_scaled : u32 = base_bw * level_scale
+      let sense_scaled : u16 = base_sense * (1u16 + user_level as u16)
+      let act_scaled   : u16 = base_act * (1u16 + user_level as u16)
+
+      meshes[i] = BioMeshIface {
+        mesh_id_hash    = hash64(user_level, i),
+        user_id_hash    = hash64(user_level, 0xA1u8),
+        role            = if act_scaled == 0u16 then MESH_SENSE else MESH_MIXED end,
+        net_scope       = SCOPE_LOCAL,
+        flags           = FLAG_NO_RF_TX
+                        | FLAG_HARD_AIRGAP
+                        | FLAG_READ_ONLY_CTRL
+                        | FLAG_FORMAL_VERIFIED
+                        | FLAG_FIPS_CRYPTO,
+        chan_sense_max  = sense_scaled,
+        chan_act_max    = act_scaled,
+        bw_kbps_max     = min_u32(bw_scaled, 256u32),
+        jitter_us_max   = 250u32,
+        latency_ms_max  = 10u16,
+        has_ip_stack    = 0u8,
+        reserved        = [0,0,0,0,0,0,0]
+      }
+    end
+
+    return meshes
+  end
+
+  ########################
+  ## 5. REGEX-STABLE ALN PATTERN
+  ########################
+
+  # All network records must match this ALN name pattern so that simple regex
+  # engines can locate them:
+  #
+  #   ^AU\.BioMesh\.(Iface|Session|Link)\.[A-Z0-9_]+$
+  #
+  # Example concrete instances below.
+
+  instance AU.BioMesh.Iface.HEAD_MESH_01 : BioMeshIface = {
+    mesh_id_hash    = 0xABCD_0000_0000_0001_u64,
+    user_id_hash    = 0xC4F0_12A9_77B3_9D21_u64,
+    role            = MESH_MIXED,
+    net_scope       = SCOPE_LOCAL,
+    flags           = FLAG_NO_RF_TX
+                    | FLAG_HARD_AIRGAP
+                    | FLAG_READ_ONLY_CTRL
+                    | FLAG_FORMAL_VERIFIED
+                    | FLAG_FIPS_CRYPTO,
+    chan_sense_max  = 64u16,
+    chan_act_max    = 16u16,
+    bw_kbps_max     = 128u32,
+    jitter_us_max   = 250u32,
+    latency_ms_max  = 10u16,
+    has_ip_stack    = 0u8,
+    reserved        = [0,0,0,0,0,0,0]
+  }
+
+  instance AU.BioMesh.Iface.SPINE_MESH_01 : BioMeshIface = {
+    mesh_id_hash    = 0xABCD_0000_0000_0002_u64,
+    user_id_hash    = 0xC4F0_12A9_77B3_9D21_u64,
+    role            = MESH_MIXED,
+    net_scope       = SCOPE_LOCAL,
+    flags           = FLAG_NO_RF_TX
+                    | FLAG_HARD_AIRGAP
+                    | FLAG_READ_ONLY_CTRL
+                    | FLAG_FORMAL_VERIFIED
+                    | FLAG_FIPS_CRYPTO,
+    chan_sense_max  = 48u16,
+    chan_act_max    = 12u16,
+    bw_kbps_max     = 128u32,
+    jitter_us_max   = 250u32,
+    latency_ms_max  = 10u16,
+    has_ip_stack    = 0u8,
+    reserved        = [0,0,0,0,0,0,0]
+  }
+
+  instance AU.BioMesh.Link.HEAD_TO_SPINE : NetLink = {
+    link_id         = 0xDEAD_BEEF_0000_0001_u64,
+    mesh_a_hash     = 0xABCD_0000_0000_0001_u64,
+    mesh_b_hash     = 0xABCD_0000_0000_0002_u64,
+    flags           = LFLAG_AUTH_MUTUAL
+                    | LFLAG_ENC_STRONG
+                    | LFLAG_NO_BCAST
+                    | LFLAG_NO_FORWARD
+                    | LFLAG_NO_REMOTE_EXEC,
+    remote_exec_cap = 0u8,
+    hop_count_max   = 1u8,
+    phy_medium_code = 2u16,    # wired differential
+    bw_kbps         = 128u32,
+    reserved        = [0,0,0,0,0,0]
+  }
+
+end spec

@@ -1,0 +1,20 @@
+repos:
+-   repo: https://github.com/detailyang/pre-commit-hooks
+    rev: v0.0.1
+    hooks:
+      - id: no-python-kernel
+        name: no-python-kernel
+        entry: ./scripts/check_no_python.sh
+        language: script
+      - id: verify-policy-bundle
+        name: verify-policy-bundle
+        entry: ./scripts/verify_policy_bundle.sh
+        language: script
+      - id: sim-runner
+        name: sim-runner
+        entry: ./scripts/pre-commit-run-sim.sh
+        language: script
+      - id: validate-aln
+        name: validate-aln
+        entry: ./scripts/validate_aln_mesh.sh
+        language: script

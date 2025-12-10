@@ -1,0 +1,34 @@
+name: BioAugClinical-ClassC-Neuronano-Release
+on:
+  push:
+    branches: [ release/* ]
+  workflow_dispatch:
+
+jobs:
+  classc-neuronano-release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Pre-flight ALN & Policy Validation (BioAugClinical)
+        run: |
+          ./bioaug-clinical/scripts/validate_pillars.sh
+          ./bioaug-clinical/scripts/validate_nanoneuro_core.sh
+
+      - name: ALN Portable Lint + Docs Gate
+        run: ./bioaug-clinical/ci/aln_and_docs_gate.sh
+
+      - name: Neuronano Math & Dataset Fidelity
+        run: ./bioaug-clinical/scripts/run_neuronano_fidelity_checks.sh
+
+      - name: Neuronano Guard Proptests (Strict)
+        run: ./bioaug-clinical/scripts/run_neuronano_guard_tests_strict.sh
+
+      - name: Package Class C Neuronano Release
+        run: ./bioaug-clinical/scripts/package_classc_release.sh
+      - name: Finishing-Touch Pipeline + Tokenless DID
+        run: ./bioaug-clinical/scripts/run_finishing_touch_with_did.sh
+      - name: Finishing-Touch + Tokenless DID (Verified)
+        run: ./bioaug-clinical/scripts/run_finishing_touch_with_did_and_verify.sh
+      - name: Run Finishing-Touch Gold-Standard Pipeline
+        run: ./bioaug-clinical/scripts/run_finishing_touch_pipeline.sh

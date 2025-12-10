@@ -1,0 +1,34 @@
+aln spec ALN.BioAug.Policies.v1
+  purpose "Bio‑Aug canonical policy library with traceability annotations for hazards and regulatory clauses"
+
+  policy net.no_internet_to_actuators
+    traceability
+      hazard_id       "HAZ-NET-001"
+      iso14971_clause "7.4; 7.5"
+      iec62304_class  "C"
+      rationale       "Prevents external network paths from driving actuators or modifying firmware." 
+    end
+
+    # semantics: disallow any flow where source origin == 'INTERNET' and sink role == 'ACTUATE'
+    guard biomech.no_direct_net_to_actuator
+      forbid any data_flow where source.origin == "INTERNET" and sink.channel_role == "ACTUATE"
+      else fail_build("Illegal external -> actuator path")
+    end
+  end
+
+  policy ethics.revocable_consent
+    traceability
+      hazard_id       "HAZ-ETH-001"
+      iso14971_clause "7.7"
+      iec62304_class  "C"
+      rationale       "Ensures patient can revoke consent and remove actuation privileges in emergency scenarios."
+    end
+
+    # semantics: require explicit consent tokens for any actuation path
+    guard ethics.consent_required_for_actuation
+      require consent_token.present == true
+      else fail_action("deny_actuation")
+    end
+  end
+
+end spec

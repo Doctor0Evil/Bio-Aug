@@ -1,0 +1,29 @@
+aln dataset NanoNeuro.NeuromorphicUrban.v1
+
+record WearableSubject {
+  id          : string
+  cohort      : string   # 'pilot','postmarket',...
+  city_region : string
+}
+
+record WearableStream {
+  subject_id  : string
+  stream_id   : string
+  metric_type : string   # 'EEG','BCI_EVENT','HRV','EDA'
+  fs_hz       : f32
+  data_uri    : string
+}
+
+record UrbanLabel {
+  stream_id   : string
+  t_start_us  : u64
+  t_end_us    : u64
+  label       : string  # 'commute','rest','overload',...
+}
+
+policy neuromorphic_urban_sanity {
+  forall u in UrbanLabel:
+    assert u.t_end_us > u.t_start_us;
+}
+
+end dataset

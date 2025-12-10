@@ -1,0 +1,23 @@
+name: BioAugClinical-DPIA-DoS-Signature-Gate
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+jobs:
+  dpia-dos-signature-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build ALN tools and signer
+        run: |
+          cd tools/signer-rs && cargo build --release
+          cd ../../aln-cli && cargo build --release
+      - name: ALN BioAugClinical Validation (DPIA + DoS)
+        run: ./aln-cli/target/release/aln validate --profile bioaug-clinical --require-dpia --require-dos-guard
+      - name: Sign policies using dev keys (CI staging)
+        run: ./bioaug-clinical/scripts/sign_all_policies.sh
+      - name: Verify ALN Signatures (placeholder)
+        run: ./bioaug-clinical/scripts/verify_aln_signatures.sh
+      - name: Zero-trust policy sanity check
+        run: ./aln-cli/target/release/aln zero-trust-validate bioaug-clinical/policies/zero_trust_bci_kernel.aln --segment 'bci-kernel,smart-city-edge'

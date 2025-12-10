@@ -1,0 +1,10 @@
+policy governance.region_switch {
+  traceability {
+    hazard_id       = 'HAZ-GOV-001'
+    iso14971_clause = '7.4,7.5'
+    iec62304_class  = 'C'
+    rationale       = 'Ensure region-appropriate consent, logging, encryption, and residency'
+    dpia            = true
+  }
+  condition { region_profile_match && link_integrity_ge_0_9999 }
+}

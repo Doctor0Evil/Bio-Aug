@@ -1,0 +1,10 @@
+policy zero_trust_bci_kernel {
+  traceability {
+    hazard_id       = 'HAZ-ZT-BCI-001'
+    iso14971_clause = '7.4,7.5'
+    iec62304_class  = 'C'
+    rationale       = 'Layered zero-trust controls for neuromorphic/BCI safety fabric'
+    dpia            = true
+  }
+  condition { microsegmentation && rbac_strict && anomaly_detectors && D_ge_0_99 }
+}

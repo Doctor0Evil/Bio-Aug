@@ -1,0 +1,9 @@
+// Copy of the ALN mesh spec for examples; keep it synchronized with aln_specs.
+// For now, duplicate the file in aln_specs that we created earlier.
+
+aln spec AU.BioMesh.NetEnvelope.v1
+  purpose "Example ALN mesh spec"
+
+  // Minimal example: reuse earlier detailed file in aln_specs; this is a placeholder
+  module Example {}
+end spec

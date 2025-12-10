@@ -1,0 +1,22 @@
+(* ALN EBNF sketch *)
+file ::= { declaration } ;
+
+declaration ::= system_decl | spec_decl | task_decl | dataset_decl | module_decl ;
+
+system_decl ::= 'aln' 'system' identifier block 'end' ;
+
+block ::= '{' { statement } '}' | 'end' ;
+
+statement ::= object_decl | policy_decl | module_decl | mapping_decl | comment ;
+
+policy_decl ::= 'policy' identifier block ;
+
+object_decl ::= 'object' identifier block ;
+
+mapping_decl ::= 'mapping' identifier 'to' identifier ;
+
+identifier ::= ? [A-Za-z0-9_.-]+ ? ;
+
+comment ::= '?' ? Any comment token ? ';'
+
+(* This is not a full EBNF grammar; it is a sketch recommended to be extended for production usage. *)

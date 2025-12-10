@@ -1,0 +1,10 @@
+policy hybrid.ai_human_controller {
+  traceability {
+    hazard_id       = 'HAZ-HYBRID-CTRL-001'
+    iso14971_clause = '7.4,7.5'
+    iec62304_class  = 'C'
+    rationale       = 'Ensure aggregate failure probability of AI+human decision stays below clinical threshold'
+    dpia            = true
+  }
+  condition { reliability_target_met && escalation_paths_defined && responsibility_allocation_documented }
+}

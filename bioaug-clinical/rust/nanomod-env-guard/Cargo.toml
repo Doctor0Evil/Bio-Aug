@@ -1,0 +1,11 @@
+[package]
+name = "nanomod-env-guard"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "nanomod_env_guard"
+path = "src/lib.rs"
+crate-type = ["rlib"]
+
+[dependencies]

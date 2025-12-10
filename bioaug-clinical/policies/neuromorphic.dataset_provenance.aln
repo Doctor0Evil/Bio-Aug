@@ -1,0 +1,10 @@
+policy neuromorphic.dataset_provenance {
+  traceability {
+    hazard_id       = 'HAZ-DATA-NEURO-001'
+    iso14971_clause = '7.4,7.5,9.2'
+    iec62304_class  = 'C'
+    rationale       = 'Ensure datasets used for nanoneuromodulation controllers have full provenance and consent'
+    dpia            = true
+  }
+  condition { dataset_signed && consent_scope_ok && no_prohibited_reuse }
+}

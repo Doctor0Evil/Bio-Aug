@@ -1,0 +1,38 @@
+// Minimal ALN grammar (sketch). Tokens and simple rules to parse blocks.
+WHITESPACE = _{ " " | "\t" | "\r" | "\n" }
+COMMENT = _{ "#" ~ (!"\n" ~ ANY )* }
+
+// Top-level
+file = { SOI ~ decl* ~ EOI }
+
+decl = _{ system_decl | spec_decl | module_decl | policy_decl | dataset_decl }
+
+system_decl = { "aln" ~ WHITESPACE+ ~ "system" ~ WHITESPACE+ ~ ident ~ block }
+
+spec_decl = { "aln" ~ WHITESPACE+ ~ "spec" ~ WHITESPACE+ ~ ident ~ block }
+
+module_decl = { "module" ~ WHITESPACE+ ~ ident ~ block }
+
+policy_decl = { "policy" ~ WHITESPACE+ ~ ident ~ block }
+
+dataset_decl = { "aln" ~ WHITESPACE+ ~ "dataset" ~ WHITESPACE+ ~ ident ~ block }
+
+block = { "{"? ~ ( stmt* ) ~ ("}" | "end" ~ WHITESPACE* ) }
+
+stmt = { ( object_decl | enum_decl | struct_decl | mapping_decl | comment_stmt ) }
+
+object_decl = { "object" ~ WHITESPACE+ ~ ident ~ block }
+
+enum_decl = { "enum" ~ WHITESPACE+ ~ ident ~ ":" ~ ident ~ block }
+
+struct_decl = { "struct" ~ WHITESPACE+ ~ ident ~ block }
+
+mapping_decl = { "mapping" ~ WHITESPACE+ ~ ident ~ WHITESPACE+ ~ "to" ~ WHITESPACE+ ~ ident }
+
+comment_stmt = { COMMENT }
+
+ident = @{ (ASCII_ALPHANUMERIC | "." | "_" | "-" )+ }
+
+
+
+// NOTE: This is a minimalist grammar for initial tests; extend to cover the full ALN syntax.

@@ -1,0 +1,22 @@
+policy pillar4.neuro_rights_guard {
+  traceability {
+    hazard_id       = 'HAZ-NEURORIGHTS-001'
+    iso14971_clause = '7.4,7.5,9.2'
+    iec62304_class  = 'C'
+    rationale       = 'Protect autonomy, mental privacy, and fairness in AI–human integrated control loops'
+    dpia            = true
+  }
+  # Explicitly gate use of neural data and neuromodulation for clinical and city-scale decisions. [web:2][web:8]
+  binding {
+    guard = "src/embedded/phi_encryption_guard_v1.rs::guard_throughput"
+    guard_version = "v1"
+    no_std = true
+  }
+
+  condition {
+    explicit_consent &&
+    purpose_limitation &&
+    transparency_controls_enabled &&
+    oversight_body_approval
+  }
+}

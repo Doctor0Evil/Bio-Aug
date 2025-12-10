@@ -1,0 +1,67 @@
+name: BioAugClinical-ClassC-CI
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+jobs:
+  bioaug-clinical-main:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build ALN tools and signer
+        run: |
+          cd tools/signer-rs && cargo build --release
+          cd ../../aln-cli && cargo build --release
+      - name: Strict ALN Validation
+        run: ./bioaug-clinical/scripts/validate_aln_strict.sh
+      - name: Sign policies using dev keys (CI staging)
+        run: ./bioaug-clinical/scripts/sign_all_policies.sh
+      - name: Traceability Export & Sign
+        run: |
+          ./bioaug-clinical/scripts/aln_coverage_and_sign.sh
+      - name: Rust Class C Checks
+        run: ./bioaug-clinical/scripts/rust_classc_checks.sh
+      - name: Gold-Standard Clinical/Governance Docs Presence
+        run: ./bioaug-clinical/ci/docs_presence_check.sh
+      - name: ALN Portable Lint + Gold-Standard Docs Gate
+        run: ./bioaug-clinical/ci/aln_and_docs_gate.sh
+      - name: Nano/Neuromorphic/City Policy Validation
+        run: ./bioaug-clinical/scripts/validate_nano_neuro_city.sh
+      - name: Nanomod Envelope Guard Proptests
+        run: ./bioaug-clinical/scripts/nanomod_guard_proptests.sh
+      - name: Run property-based tests
+        run: ./bioaug-clinical/scripts/run_proptests.sh
+      - name: SBOM + Vulnerability Scan (stub)
+        run: ./bioaug-clinical/scripts/sbom_and_vuln_scan_stub.sh
+      - name: WCET & Memory Bounds (stub)
+        run: ./bioaug-clinical/scripts/wcet_mem_check.sh
+      - name: WASM verification (stub)
+        run: |
+          ./bioaug-clinical/scripts/wasm_verify.sh bioaug-clinical/build/out/wasm_policy_sig_gate.wasm bioaug-clinical/build/out/capability_budget_proof.json || true
+      - name: Pillar-Level Nano/Neuro/City/Neuro-Rights Validation
+        run: ./bioaug-clinical/scripts/validate_pillars.sh
+      - name: NanoNeuro Core Spec & Safety Validation
+        run: ./bioaug-clinical/scripts/validate_nanoneuro_core.sh
+      - name: Certification: Core NanoNeuro (bundle + sign)
+        run: ./bioaug-clinical/scripts/certify_core_nanoneuro.sh
+      - name: Export Neuronano Trace Snapshot & Sign
+        run: ./bioaug-clinical/scripts/export_neuronano_trace_snapshot.sh
+      - name: Run all checks (full dev pipeline)
+        run: ./bioaug-clinical/scripts/run_all_checks.sh
+      - name: Package Class C Neuronano Release (Dev)
+        run: ./bioaug-clinical/scripts/package_classc_release.sh
+      - name: Verify Class C Release Tar
+        run: ./bioaug-clinical/scripts/verify_classc_release.sh
+      - name: Run Finishing-Touch Gold-Standard Pipeline (Dev)
+        run: ./bioaug-clinical/scripts/run_finishing_touch_pipeline.sh
+      - name: Neuronano Mathematical & Dataset Fidelity Checks
+        run: ./bioaug-clinical/scripts/run_neuronano_fidelity_checks.sh
+
+      - name: Neuronano Guard Proptests (Strict)
+        run: ./bioaug-clinical/scripts/run_neuronano_guard_tests_strict.sh
+
+      - name: Neuronano/Cyberneuro Security & Signing Meta (stub)
+        run: ./bioaug-clinical/scripts/neuronano_security_ci_stub.sh
+      - name: Verify ALN signatures (placeholder)
+        run: ./bioaug-clinical/scripts/verify_aln_signatures.sh

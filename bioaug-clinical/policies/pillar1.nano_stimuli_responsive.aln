@@ -1,0 +1,21 @@
+policy pillar1.nano_stimuli_responsive {
+  traceability {
+    hazard_id       = 'HAZ-NANO-STIM-002'
+    iso14971_clause = '7.4,7.5'
+    iec62304_class  = 'C'
+    rationale       = 'Wireless, stimuli-responsive nanomaterial neuromodulation must remain within validated safety envelopes'
+    dpia            = true
+  }
+  # Design space: structure, mechanism, therapeutic outcome; enforce envelope and stability guardrails. [web:10][web:15]
+  binding {
+    guard = "src/embedded/pillar1_nano_safety_guard_v1.rs::guard_nano_stim"
+    guard_version = "v1"
+    no_std = true
+  }
+
+  condition {
+    safety_envelope_verified &&
+    targeting_specificity_verified &&
+    long_term_stability_verified
+  }
+}

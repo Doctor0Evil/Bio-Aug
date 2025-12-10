@@ -1,0 +1,7 @@
+{
+  "name": "bci_anti_nausea_normal",
+  "events": [
+    { "source": "internal", "action": "actuate", "channel": "vagal_stim_channel" },
+    { "source": "wearable", "action": "sense", "channel": "nausea_score" }
+  ]
+}

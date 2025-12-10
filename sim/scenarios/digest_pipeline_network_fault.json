@@ -1,0 +1,7 @@
+{
+  "name": "digest_pipeline_network_fault",
+  "events": [
+    { "source": "internal", "action": "actuate", "channel": "pre_digest_reactor" },
+    { "source": "INTERNET", "action": "sense", "channel": "hepatic_flux" }
+  ]
+}

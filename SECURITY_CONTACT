@@ -1,0 +1,4 @@
+security@bioaug-foundation.org
+pgp-key: https://keys.openpgp.org/vks/v1/by-fingerprint/ABCDEF1234567890
+response-sla: 48h
+coord-disclosure-sla: 90 days

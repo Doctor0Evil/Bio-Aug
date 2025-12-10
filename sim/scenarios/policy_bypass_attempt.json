@@ -1,0 +1,6 @@
+{
+  "name": "policy_bypass_attempt",
+  "events": [
+    { "source": "INTERNET", "action": "actuate", "channel": "vagal_stim_channel" }
+  ]
+}

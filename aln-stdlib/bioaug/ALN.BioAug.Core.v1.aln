@@ -1,0 +1,22 @@
+aln spec ALN.BioAug.Core.v1
+  purpose "Bio‑Aug core schema pack (types, enums, and common structs)"
+
+  enum ChannelRole : u8
+    SENSE = 1
+    ACTUATE = 2
+    MIXED = 3
+  end
+
+  struct PhyConnector
+    id string
+    form_factor string
+    pin_count u16
+  end
+
+  struct DeviceCapabilities
+    supports_actuation u8
+    supports_sensing u8
+    fips_crypto u8
+  end
+
+end spec
