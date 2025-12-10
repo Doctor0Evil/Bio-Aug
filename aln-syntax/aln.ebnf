@@ -1,22 +1,121 @@
-(* ALN EBNF sketch *)
-file ::= { declaration } ;
+(* ALN EBNF core syntax *)
 
-declaration ::= system_decl | spec_decl | task_decl | dataset_decl | module_decl ;
+file
+  ::= { declaration } ;
 
-system_decl ::= 'aln' 'system' identifier block 'end' ;
+declaration
+  ::= system_decl
+   |  spec_decl
+   |  task_decl
+   |  dataset_decl
+   |  module_decl
+   ;
 
-block ::= '{' { statement } '}' | 'end' ;
+system_decl
+  ::= 'aln' 'system' identifier block 'end' ;
 
-statement ::= object_decl | policy_decl | module_decl | mapping_decl | comment ;
+spec_decl
+  ::= 'spec' identifier block 'end' ;
 
-policy_decl ::= 'policy' identifier block ;
+task_decl
+  ::= 'task' identifier block 'end' ;
 
-object_decl ::= 'object' identifier block ;
+dataset_decl
+  ::= 'dataset' identifier block 'end' ;
 
-mapping_decl ::= 'mapping' identifier 'to' identifier ;
+module_decl
+  ::= 'module' identifier block 'end' ;
 
-identifier ::= ? [A-Za-z0-9_.-]+ ? ;
+block
+  ::= '{' { statement } '}'
+   |  'is' { statement } 'end'
+   ;
 
-comment ::= '?' ? Any comment token ? ';'
+statement
+  ::= object_decl
+   |  policy_decl
+   |  module_decl
+   |  mapping_decl
+   |  assignment
+   |  comment
+   ;
 
-(* This is not a full EBNF grammar; it is a sketch recommended to be extended for production usage. *)
+policy_decl
+  ::= 'policy' identifier block 'end' ;
+
+object_decl
+  ::= 'object' identifier block 'end' ;
+
+mapping_decl
+  ::= 'mapping' identifier 'to' identifier ';' ;
+
+assignment
+  ::= identifier '=' expression ';' ;
+
+expression
+  ::= literal
+   |  identifier
+   |  expression binary_op expression
+   |  unary_op expression
+   |  '(' expression ')'
+   ;
+
+binary_op
+  ::= 'and' | 'or' | '->' | '+' | '-' | '*' | '/' ;
+
+unary_op
+  ::= 'not' | '!' | '-' ;
+
+literal
+  ::= string_lit
+   |  int_lit
+   |  bool_lit
+   ;
+
+string_lit
+  ::= '"' { string_char } '"' ;
+
+string_char
+  ::= /* any character except '"' and newline */ ;
+
+int_lit
+  ::= digit { digit } ;
+
+bool_lit
+  ::= 'true' | 'false' ;
+
+identifier
+  ::= ident_start { ident_part } ;
+
+ident_start
+  ::= 'A' | 'B' | 'C' | 'D' | 'E' | 'F' | 'G' | 'H' | 'I' | 'J'
+   |  'K' | 'L' | 'M' | 'N' | 'O' | 'P' | 'Q' | 'R' | 'S' | 'T'
+   |  'U' | 'V' | 'W' | 'X' | 'Y' | 'Z'
+   |  'a' | 'b' | 'c' | 'd' | 'e' | 'f' | 'g' | 'h' | 'i' | 'j'
+   |  'k' | 'l' | 'm' | 'n' | 'o' | 'p' | 'q' | 'r' | 's' | 't'
+   |  'u' | 'v' | 'w' | 'x' | 'y' | 'z'
+   |  '_' ;
+
+ident_part
+  ::= ident_start
+   |  digit
+   |  '.'
+   |  '-'
+   ;
+
+digit
+  ::= '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' ;
+
+comment
+  ::= '?' { comment_char } ';' ;
+
+comment_char
+  ::= /* any character except ';' and newline */ ;
+
+(* Optional: layout / whitespace handling *)
+
+whitespace
+  ::= ' ' | '\t' | '\r' | '\n' ;
+
+separator
+  ::= { whitespace | comment } ;
