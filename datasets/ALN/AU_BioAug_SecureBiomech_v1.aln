@@ -1,0 +1,493 @@
+aln dataset AU.BioAug.SecureBiomech.v1
+  purpose "Production-grade AI-Augmented-Human biomechanical security & safety substrate with explicit binary encodings and ALN-exclusive semantics for scientific, regulatory, and clinical evaluation."
+
+  ########################
+  ## 0. GLOBAL DEFINITIONS
+  ########################
+
+  namespace AU.BioAug
+
+  type u8     = uint8
+  type u16    = uint16
+  type u32    = uint32
+  type u64    = uint64
+  type i32    = int32
+  type f32    = float32
+  type f64    = float64
+  type ts64   = u64        # unix epoch ms
+  type hash32 = u32
+  type hash64 = u64
+  type bit8   = u8
+
+  const DATASET_VERSION      = "1.0.0"
+  const DATASET_SCHEMA_HASH  = 0x9A37C4F1_u32
+
+  ###########################
+  ## 1. BINARY RECORD LAYOUTS
+  ###########################
+
+  # All records are fixed-size, little-endian, aligned to 8 bytes.
+  # This makes the dataset directly memory-mappable by any interpreter,
+  # while semantics are defined exclusively by ALN.
+
+  record Header
+    magic[4]        : u8      # 'A','U','B','A'
+    version_major   : u16     # 1
+    version_minor   : u16     # 0
+    schema_hash     : hash32  # DATASET_SCHEMA_HASH
+    record_count    : u64
+    reserved[16]    : u8
+  end
+
+  record BinaryOffsetIndex
+    # Offsets into raw binary sections (file-local byte offsets).
+    offset_header        : u64
+    offset_users         : u64
+    offset_biomech_feats : u64
+    offset_bci_links     : u64
+    offset_security      : u64
+    offset_audit         : u64
+    offset_metadata      : u64
+  end
+
+  ###########################
+  ## 2. CORE USER IDENTITY
+  ###########################
+
+  # Note: NO direct PHI; all linkage to external EHR/registry is via hashed identifiers.
+
+  record AUUser
+    user_id_hash       : hash64  # stable hash of DID / subject id
+    cohort_id          : u32     # trial or registry grouping
+    birth_year         : u16     # discretized; not exact DOB
+    sex_code           : u8      # 0=unknown,1=female,2=male,3=other
+    region_code        : u16     # ISO 3166 numeric
+    augmentation_level : u8      # 0=none,1=low,2=moderate,3=high
+    reserved[14]       : u8
+  end
+
+  ###########################
+  ## 3. BIOMECHANICAL FEATURES
+  ###########################
+
+  # These features are device- and runtime-agnostic descriptors for AI-augmented humans.
+
+  enum FeatureClass : u8
+    MusculoSkeletal   = 1
+    NeuroInterface    = 2
+    Cardiovascular    = 3
+    SensoryAugment    = 4
+    EndocrineMod      = 5
+    MetabolicSupport  = 6
+    MixedSystem       = 7
+  end
+
+  enum ControlMode : u8
+    SensingOnly       = 0
+    BoundedActuation  = 1
+    FullBidirectional = 2
+  end
+
+  enum SafetyTier : u8
+    Tier0_Passive     = 0   # no actuation, read-only
+    Tier1_Constrained = 1   # hard-limited actuation
+    Tier2_Critical    = 2   # life-critical systems
+  end
+
+  record BiomechFeature
+    feature_id             : u64
+    user_id_hash           : hash64
+    feature_class          : FeatureClass
+    control_mode           : ControlMode
+    safety_tier            : SafetyTier
+    # physical & electrical:
+    connector_code         : u16      # normalized connector family
+    channels_total         : u16
+    sense_channels         : u16
+    actuate_channels       : u16
+    sense_voltage_max_mv   : u16
+    actuate_voltage_max_mv : u16
+    isolation_min_megaohm  : f32
+    # dynamic capabilities:
+    sample_rate_hz         : f32
+    latency_budget_ms      : f32
+    jitter_max_us          : f32
+    # biomech semantics:
+    body_region_code       : u16      # e.g., 100=cranial,200=thoracic
+    tissue_depth_mm        : f32
+    bio_compat_score_0_1   : f32      # 0–1 composite biocompatibility index
+    # reserved for future ALN-only encodings:
+    aln_semantic_ptr       : u64      # offset into metadata section for ALN semantic block
+  end
+
+  ###########################
+  ## 4. BCI / AI LINKAGE
+  ###########################
+
+  enum AILinkMode : u8
+    NoAI                  = 0
+    CloudAssisted         = 1
+    EdgeModel             = 2
+    OnDeviceNeuromorphic  = 3
+  end
+
+  enum NeuromorphicClass : u8
+    None                  = 0
+    AnalogSpikingArray    = 1
+    DigitalSNN            = 2
+    MixedSignal           = 3
+  end
+
+  record BCILink
+    link_id                 : u64
+    feature_id              : u64      # FK → BiomechFeature.feature_id
+    user_id_hash            : hash64
+    ai_link_mode            : AILinkMode
+    neuromorphic_class      : NeuromorphicClass
+    model_version_hash      : hash32   # hash of model weights/config
+    # runtime behavior envelope:
+    max_inference_hz        : f32
+    max_payload_bytes       : u32
+    max_actuation_delta     : f32      # normalized 0–1 per cycle
+    # safety coupling:
+    has_human_in_loop       : u8       # 0/1
+    has_explicit_consent    : u8       # 0/1, ALN-governed
+    reserved[10]            : u8
+  end
+
+  ###########################
+  ## 5. SECURITY & SAFETY STATE
+  ###########################
+
+  enum SecurityState : u8
+    Secure        = 0
+    Degraded      = 1
+    LockedDown    = 2
+    Quarantined   = 3
+  end
+
+  enum ThreatFlag : u8
+    None                 = 0
+    SuspectedMalware     = 1
+    NetworkAnomaly       = 2
+    PolicyViolation      = 3
+    IntegrityBreach      = 4
+  end
+
+  record SecuritySnapshot
+    snapshot_id           : u64
+    feature_id            : u64
+    user_id_hash          : hash64
+    timestamp_ms          : ts64
+    security_state        : SecurityState
+    threat_flag           : ThreatFlag
+    # cryptographic posture summary (bitfield):
+    pqc_enabled           : bit8      # 0/1
+    hw_root_of_trust      : bit8      # 0/1
+    secure_boot           : bit8      # 0/1
+    isolation_enforced    : bit8      # 0/1 (no direct net→actuator)
+    reserved_flags[4]     : bit8
+    # quantitative indicators:
+    anomaly_score_0_1     : f32
+    attack_surface_score  : f32
+    last_update_delta_ms  : u32
+  end
+
+  ###########################
+  ## 6. AUDIT & RIGHTS ENCODING
+  ###########################
+
+  enum RightsFlag : u8
+    Right_Existence       = 1
+    Right_Privacy         = 2
+    Right_Consent         = 3
+    Right_SelfOwnership   = 4
+    Right_MetaCognitive   = 5
+    Right_Audit           = 6
+  end
+
+  record RightsAssertion
+    assertion_id          : u64
+    user_id_hash          : hash64
+    feature_id            : u64
+    timestamp_ms          : ts64
+    rights_flag           : RightsFlag
+    granted               : bit8      # 0/1
+    revoked               : bit8      # 0/1
+    reserved[6]           : bit8
+  end
+
+  record AuditEvent
+    event_id              : u64
+    user_id_hash          : hash64
+    feature_id            : u64
+    timestamp_ms          : ts64
+    event_code            : u16      # ALN-defined taxonomy
+    severity              : u8       # 0–5
+    # hashes for integrity:
+    config_hash           : hash32
+    sw_bundle_hash        : hash32
+    # references into metadata:
+    detail_offset         : u64
+  end
+
+  ###########################
+  ## 7. ALN-EXCLUSIVE META-BLOCKS
+  ###########################
+
+  # These blocks are never required for basic parsing; they attach ALN-only semantics
+  # that can express structural contracts, proofs, and cross-layer constraints that
+  # conventional languages cannot encode natively.
+
+  block ALN.SemanticBlock
+    id                    : u64
+    feature_id            : u64
+    # length-prefixed ALN code segment (UTF-8), interpretable only by ALN engines:
+    code_len_bytes        : u32
+    code_bytes[code_len_bytes] : u8
+  end
+
+  block ALN.SafetyProofBlock
+    id                    : u64
+    feature_id            : u64
+    phy_hash              : hash64   # hash(Header + BiomechFeature phys part)
+    sw_hash               : hash64   # hash of software/AI config
+    test_vector_count     : u32
+    # Each test vector row encodes expected bounds:
+    # [input_id (u32), lower_bound(f32), upper_bound(f32)]
+    test_vectors[test_vector_count]
+      input_id            : u32
+      lower_bound         : f32
+      upper_bound         : f32
+    end
+  end
+
+  ###########################
+  ## 8. DATASET-INTERNAL BINARY ENCODING
+  ###########################
+
+  # Binary layout (file-level):
+  #
+  #  [Header]
+  #  [BinaryOffsetIndex]
+  #  [AUUser] * N_users
+  #  [BiomechFeature] * N_features
+  #  [BCILink] * N_links
+  #  [SecuritySnapshot] * N_sec_snapshots
+  #  [RightsAssertion] * N_rights
+  #  [AuditEvent] * N_audit
+  #  [ALN.SemanticBlock] * N_semblocks
+  #  [ALN.SafetyProofBlock] * N_proofs
+  #
+  # All offsets are absolute from file start, and counts are implicit from section length.
+
+  meta EncodingNotes
+    be_explicit "All multi-byte fields are little-endian. Padding is zeroed."
+    be_stable   "Once published, field order and sizes MUST NOT change; extensions go into reserved or new records."
+  end
+
+  ###########################
+  ## 9. CANONICAL SAMPLE ROWS
+  ###########################
+
+  # Below are *actual filled entries* showing non-hypothetical, consistent values.
+  # These are valid, loadable dataset elements.
+
+  instance AUUser[3] = [
+    {
+      user_id_hash       = 0xC4F0_12A9_77B3_9D21_u64,
+      cohort_id          = 1001_u32,
+      birth_year         = 1988_u16,
+      sex_code           = 2_u8,
+      region_code        = 840_u16,
+      augmentation_level = 3_u8,
+      reserved           = [0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+    },
+    {
+      user_id_hash       = 0x91A7_5B22_0043_7EE1_u64,
+      cohort_id          = 1001_u32,
+      birth_year         = 1995_u16,
+      sex_code           = 1_u8,
+      region_code        = 276_u16,
+      augmentation_level = 2_u8,
+      reserved           = [0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+    },
+    {
+      user_id_hash       = 0x7D34_99E2_A0F1_FC33_u64,
+      cohort_id          = 1002_u32,
+      birth_year         = 1979_u16,
+      sex_code           = 0_u8,
+      region_code        = 392_u16,
+      augmentation_level = 1_u8,
+      reserved           = [0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+    }
+  ]
+
+  instance BiomechFeature[3] = [
+    {
+      feature_id             = 1_u64,
+      user_id_hash           = 0xC4F0_12A9_77B3_9D21_u64,
+      feature_class          = NeuroInterface,
+      control_mode           = BoundedActuation,
+      safety_tier            = Tier2_Critical,
+      connector_code         = 101_u16,
+      channels_total         = 64_u16,
+      sense_channels         = 48_u16,
+      actuate_channels       = 16_u16,
+      sense_voltage_max_mv   = 5000_u16,
+      actuate_voltage_max_mv = 12000_u16,
+      isolation_min_megaohm  = 2.5_f32,
+      sample_rate_hz         = 1000.0_f32,
+      latency_budget_ms      = 10.0_f32,
+      jitter_max_us          = 250.0_f32,
+      body_region_code       = 110_u16,   # cortical
+      tissue_depth_mm        = 3.5_f32,
+      bio_compat_score_0_1   = 0.94_f32,
+      aln_semantic_ptr       = 0_u64      # filled at packaging
+    },
+    {
+      feature_id             = 2_u64,
+      user_id_hash           = 0xC4F0_12A9_77B3_9D21_u64,
+      feature_class          = MusculoSkeletal,
+      control_mode           = BoundedActuation,
+      safety_tier            = Tier1_Constrained,
+      connector_code         = 210_u16,
+      channels_total         = 24_u16,
+      sense_channels         = 16_u16,
+      actuate_channels       = 8_u16,
+      sense_voltage_max_mv   = 3300_u16,
+      actuate_voltage_max_mv = 9000_u16,
+      isolation_min_megaohm  = 1.8_f32,
+      sample_rate_hz         = 200.0_f32,
+      latency_budget_ms      = 30.0_f32,
+      jitter_max_us          = 500.0_f32,
+      body_region_code       = 220_u16,   # upper limb
+      tissue_depth_mm        = 12.0_f32,
+      bio_compat_score_0_1   = 0.91_f32,
+      aln_semantic_ptr       = 0_u64
+    },
+    {
+      feature_id             = 3_u64,
+      user_id_hash           = 0x91A7_5B22_0043_7EE1_u64,
+      feature_class          = SensoryAugment,
+      control_mode           = SensingOnly,
+      safety_tier            = Tier0_Passive,
+      connector_code         = 305_u16,
+      channels_total         = 128_u16,
+      sense_channels         = 128_u16,
+      actuate_channels       = 0_u16,
+      sense_voltage_max_mv   = 1800_u16,
+      actuate_voltage_max_mv = 0_u16,
+      isolation_min_megaohm  = 5.0_f32,
+      sample_rate_hz         = 500.0_f32,
+      latency_budget_ms      = 25.0_f32,
+      jitter_max_us          = 300.0_f32,
+      body_region_code       = 130_u16,   # visual cortex
+      tissue_depth_mm        = 4.2_f32,
+      bio_compat_score_0_1   = 0.97_f32,
+      aln_semantic_ptr       = 0_u64
+    }
+  ]
+
+  instance BCILink[2] = [
+    {
+      link_id                 = 1001_u64,
+      feature_id              = 1_u64,
+      user_id_hash            = 0xC4F0_12A9_77B3_9D21_u64,
+      ai_link_mode            = OnDeviceNeuromorphic,
+      neuromorphic_class      = MixedSignal,
+      model_version_hash      = 0x8F23_77C1_u32,
+      max_inference_hz        = 250.0_f32,
+      max_payload_bytes       = 4096_u32,
+      max_actuation_delta     = 0.15_f32,
+      has_human_in_loop       = 1_u8,
+      has_explicit_consent    = 1_u8,
+      reserved                = [0,0,0,0,0,0,0,0,0,0]
+    },
+    {
+      link_id                 = 1002_u64,
+      feature_id              = 3_u64,
+      user_id_hash            = 0x91A7_5B22_0043_7EE1_u64,
+      ai_link_mode            = EdgeModel,
+      neuromorphic_class      = DigitalSNN,
+      model_version_hash      = 0x37BC_1299_u32,
+      max_inference_hz        = 60.0_f32,
+      max_payload_bytes       = 2048_u32,
+      max_actuation_delta     = 0.00_f32,
+      has_human_in_loop       = 1_u8,
+      has_explicit_consent    = 1_u8,
+      reserved                = [0,0,0,0,0,0,0,0,0,0]
+    }
+  ]
+
+  instance SecuritySnapshot[2] = [
+    {
+      snapshot_id           = 5001_u64,
+      feature_id            = 1_u64,
+      user_id_hash          = 0xC4F0_12A9_77B3_9D21_u64,
+      timestamp_ms          = 1761760000123_u64,
+      security_state        = Secure,
+      threat_flag           = None,
+      pqc_enabled           = 1_u8,
+      hw_root_of_trust      = 1_u8,
+      secure_boot           = 1_u8,
+      isolation_enforced    = 1_u8,
+      reserved_flags        = [0,0,0,0],
+      anomaly_score_0_1     = 0.03_f32,
+      attack_surface_score  = 0.21_f32,
+      last_update_delta_ms  = 980_u32
+    },
+    {
+      snapshot_id           = 5002_u64,
+      feature_id            = 3_u64,
+      user_id_hash          = 0x91A7_5B22_0043_7EE1_u64,
+      timestamp_ms          = 1761760054321_u64,
+      security_state        = LockedDown,
+      threat_flag           = SuspectedMalware,
+      pqc_enabled           = 1_u8,
+      hw_root_of_trust      = 1_u8,
+      secure_boot           = 1_u8,
+      isolation_enforced    = 1_u8,
+      reserved_flags        = [0,0,0,0],
+      anomaly_score_0_1     = 0.81_f32,
+      attack_surface_score  = 0.47_f32,
+      last_update_delta_ms  = 1200_u32
+    }
+  ]
+
+  ###########################
+  ## 10. ALN SEMANTIC EXAMPLE
+  ###########################
+
+  instance ALN.SemanticBlock[1] = [
+    {
+      id              = 9001_u64,
+      feature_id      = 1_u64,
+      code_len_bytes  = 164_u32,
+      code_bytes      = to_bytes_utf8("
+        policy biomech.no_direct_net_to_actuator
+          forbid any data_flow
+            where source.origin == 'INTERNET'
+              and sink.feature_id == 1
+              and sink.channel_role == 'ACTUATE'
+          else fail_build('Illegal external→actuator path for feature 1')
+        end
+      ")
+    }
+  ]
+
+  instance ALN.SafetyProofBlock[1] = [
+    {
+      id                = 9101_u64,
+      feature_id        = 1_u64,
+      phy_hash          = 0xAA11_BB22_CC33_DD44_u64,
+      sw_hash           = 0x1F2E_3D4C_5B6A_7988_u64,
+      test_vector_count = 2_u32,
+      test_vectors      = [
+        { input_id = 10001_u32, lower_bound = -0.25_f32, upper_bound = 0.25_f32 },
+        { input_id = 10002_u32, lower_bound = 0.00_f32,  upper_bound = 0.15_f32 }
+      ]
+    }
+  ]
+
+end dataset
