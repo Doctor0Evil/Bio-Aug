@@ -1,38 +1,230 @@
-// Minimal ALN grammar (sketch). Tokens and simple rules to parse blocks.
+// aln.pest
+// Minimal–completed ALN grammar for initial high‑value parsing.
+// NOTE: Keep this file dependency‑free and Rust/Pest‑ready.
+
+// ---------- LEXICAL LAYER ----------
+
+// Implicit layout: run between ~ and repetitions.
 WHITESPACE = _{ " " | "\t" | "\r" | "\n" }
-COMMENT = _{ "#" ~ (!"\n" ~ ANY )* }
+COMMENT    = _{ "#" ~ (!"\n" ~ ANY )* }
 
-// Top-level
-file = { SOI ~ decl* ~ EOI }
+// Base character classes.
+ALPHA      = _{ 'a'..'z' | 'A'..'Z' }
+DIGIT      = _{ '0'..'9' }
+ID_CHAR    = _{ ALPHA | DIGIT | "." | "_" | "-" }
 
-decl = _{ system_decl | spec_decl | module_decl | policy_decl | dataset_decl }
+// Identifiers (atomic so they are returned as single tokens).
+ident      = @{ ALPHA ~ ID_CHAR* }
 
-system_decl = { "aln" ~ WHITESPACE+ ~ "system" ~ WHITESPACE+ ~ ident ~ block }
+// Literals.
+int_lit    = @{ DIGIT+ }
+bool_lit   = @{ "true" | "false" }
+string_lit = @{ "\"" ~ (!"\"" ~ ANY )* ~ "\"" }
 
-spec_decl = { "aln" ~ WHITESPACE+ ~ "spec" ~ WHITESPACE+ ~ ident ~ block }
+// ---------- TOP-LEVEL ----------
 
-module_decl = { "module" ~ WHITESPACE+ ~ ident ~ block }
+// file := SOI decl* EOI
+file       = { SOI ~ decl* ~ EOI }
 
-policy_decl = { "policy" ~ WHITESPACE+ ~ ident ~ block }
+// decl := system | spec | module | policy | dataset | object | enum | struct | mapping
+decl       = _{
+    system_decl
+  | spec_decl
+  | module_decl
+  | policy_decl
+  | dataset_decl
+  | object_decl
+  | enum_decl
+  | struct_decl
+  | mapping_decl
+}
 
-dataset_decl = { "aln" ~ WHITESPACE+ ~ "dataset" ~ WHITESPACE+ ~ ident ~ block }
+// ---------- DECLARATIONS ----------
 
-block = { "{"? ~ ( stmt* ) ~ ("}" | "end" ~ WHITESPACE* ) }
+system_decl  = { "aln" ~ "system" ~ ident ~ block }
+spec_decl    = { "aln" ~ "spec"   ~ ident ~ block }
+module_decl  = { "module" ~ ident ~ block }
+policy_decl  = { "policy" ~ ident ~ block }
+dataset_decl = { "aln" ~ "dataset" ~ ident ~ block }
 
-stmt = { ( object_decl | enum_decl | struct_decl | mapping_decl | comment_stmt ) }
+// ---------- BLOCKS & STATEMENTS ----------
 
-object_decl = { "object" ~ WHITESPACE+ ~ ident ~ block }
+// block := '{' stmt* '}' | 'is' stmt* 'end' | stmt* 'end'
+// Pest version with explicit optional elements:
+//   - Optional '{' and '}'
+//   - Optional 'is' keyword
+block = {
+    (
+        "{" ~ stmt* ~ "}"
+      | "is" ~ stmt* ~ "end"
+      | stmt* ~ "end"
+    )
+}
 
-enum_decl = { "enum" ~ WHITESPACE+ ~ ident ~ ":" ~ ident ~ block }
+// stmt := object | enum | struct | mapping | assignment | comment
+stmt = _{
+    object_decl
+  | enum_decl
+  | struct_decl
+  | mapping_decl
+  | assignment
+  | comment_stmt
+}
 
-struct_decl = { "struct" ~ WHITESPACE+ ~ ident ~ block }
+// ---------- OBJECT / ENUM / STRUCT / MAPPING ----------
 
-mapping_decl = { "mapping" ~ WHITESPACE+ ~ ident ~ WHITESPACE+ ~ "to" ~ WHITESPACE+ ~ ident }
+object_decl = { "object" ~ ident ~ block }
+
+// enum T: Base { ... }
+enum_decl   = {
+    "enum" ~ ident ~ ":" ~ ident ~ block
+}
+
+// struct T { ... }
+struct_decl = { "struct" ~ ident ~ block }
+
+// mapping Source to Target;
+mapping_decl = {
+    "mapping" ~ ident ~ "to" ~ ident ~ (";" | EOI)
+}
+
+// ---------- EXPRESSIONS & ASSIGNMENTS ----------
+
+// assignment: name = expr ;
+assignment = {
+    ident ~ "=" ~ expr ~ ";"
+}
+
+// expr := literal | ident | expr bin_op expr | un_op expr | "(" expr ")"
+// In Pest/PEG, left‑recursion is illegal, so use precedence levels.
+expr       = { logic_or }
+
+logic_or   = { logic_and ~ ( "or"  ~ logic_and )* }
+logic_and  = { equality  ~ ( "and" ~ equality  )* }
+equality   = { add       ~ ( ("==" | "!=") ~ add )* }
+add        = { mul       ~ ( ("+" | "-") ~ mul )* }
+mul        = { unary     ~ ( ("*" | "/") ~ unary )* }
+
+unary      = { ( "not" | "!" | "-" )* ~ primary }
+
+primary    = {
+      literal
+    | ident
+    | "(" ~ expr ~ ")"
+}
+
+// literal := int | bool | string
+literal    = _{ int_lit | bool_lit | string_lit }
+
+// ---------- COMMENTS AS STATEMENTS ----------
 
 comment_stmt = { COMMENT }
 
-ident = @{ (ASCII_ALPHANUMERIC | "." | "_" | "-" )+ }
+// ---------- OPTIONAL / REPETITION HIGHLIGHTS (EBNF STYLE NOTES) ----------
+//
+// In classical EBNF for this grammar:
+//
+//   file        ::= { decl } ;
+//   block       ::= [ "{" ] { stmt } [ "}" | "end" ] ;
+//   stmt        ::= object_decl | enum_decl | struct_decl
+//                |  mapping_decl | assignment | comment ;
+//   ident       ::= ALPHA , { ALPHA | DIGIT | "." | "_" | "-" } ;
+//
+// Optional element:  [ "{" ]
+// Zero-or-more:      { stmt }
+// One-or-more:       stmt , { stmt }  (in Pest: stmt+)
+//
+// These comments are intentionally here so Raptor‑mini can emit
+// matching EBNF/ANTLR conversions without changing the PEG.
 
+// ---------- ANTLR4 SKELETON (FOR CONVERSION) ----------
+//
+// grammar ALN;
+//
+// file        : decl* EOF ;
+// decl        : systemDecl
+//             | specDecl
+//             | moduleDecl
+//             | policyDecl
+//             | datasetDecl
+//             | objectDecl
+//             | enumDecl
+//             | structDecl
+//             | mappingDecl
+//             ;
+//
+// systemDecl  : 'aln' 'system' IDENT block ;
+// specDecl    : 'aln' 'spec'   IDENT block ;
+// moduleDecl  : 'module' IDENT block ;
+// policyDecl  : 'policy' IDENT block ;
+// datasetDecl : 'aln' 'dataset' IDENT block ;
+//
+// block       : '{' stmt* '}'           // braced
+//             | 'is' stmt* 'end'        // is/end form
+//             | stmt* 'end'             // bare/end
+//             ;
+//
+// stmt        : objectDecl
+//             | enumDecl
+//             | structDecl
+//             | mappingDecl
+//             | assignment
+//             | COMMENT
+//             ;
+//
+// objectDecl  : 'object' IDENT block ;
+// enumDecl    : 'enum' IDENT ':' IDENT block ;
+// structDecl  : 'struct' IDENT block ;
+// mappingDecl : 'mapping' IDENT 'to' IDENT ';' ;
+// assignment  : IDENT '=' expr ';' ;
+//
+// expr        : logicOr ;
+// logicOr     : logicAnd ( 'or'  logicAnd )* ;
+// logicAnd    : equality ( 'and' equality )* ;
+// equality    : add ( ('==' | '!=') add )* ;
+// add         : mul ( ('+' | '-') mul )* ;
+// mul         : unary ( ('*' | '/') unary )* ;
+// unary       : ( 'not' | '!' | '-' )* primary ;
+// primary     : literal
+//             | IDENT
+//             | '(' expr ')'
+//             ;
+//
+// literal     : INT | BOOL | STRING ;
+//
+// IDENT       : [A-Za-z] [A-Za-z0-9._-]* ;
+// INT         : [0-9]+ ;
+// BOOL        : 'true' | 'false' ;
+// STRING      : '"' (~["\r\n])* '"' ;
+//
+// COMMENT     : '#' ~[\r\n]* -> skip ;
+// WS          : [ \t\r\n]+   -> skip ;
 
-
-// NOTE: This is a minimalist grammar for initial tests; extend to cover the full ALN syntax.
+// ---------- EXAMPLE ALN (FOR VALIDATION & ERROR SURFACING) ----------
+//
+// Example that should parse cleanly:
+//
+//   aln system Core {
+//       object Pipeline {
+//           struct Config {
+//               timeout = 30;
+//               enabled = true;
+//           end
+//       end
+//
+//       enum State: u8 {
+//           INIT
+//           RUNNING
+//           DONE
+//       end
+//
+//       mapping Raw to Normalized;
+//   end
+//
+// If the parser reports an error, focus on:
+//   - unmatched '{' / '}' vs 'end'
+//   - missing ';' after mapping/assignment
+//   - IDENT characters outside [A-Za-z0-9._-]
+//
+// Use Pest’s diagnostics (position, expected rules) to wire precise
+// IDE feedback for Raptor‑mini.
