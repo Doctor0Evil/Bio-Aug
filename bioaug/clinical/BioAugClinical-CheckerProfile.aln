@@ -1,0 +1,20 @@
+# path: bioaug/clinical/BioAugClinical-CheckerProfile.aln
+type,id,key,value
+profile,BioAugClinical,iec_62304_class,C
+profile,BioAugClinical,iso_14971_profile,high_hazard
+hazard,HAZ-ACT-001,description,"Unintended actuator overdrive"
+hazard,HAZ-ACT-001,severity,catastrophic
+hazard,HAZ-ACT-001,probability,P2
+control,CTL-ACT-001,hazard_id,HAZ-ACT-001
+control,CTL-ACT-001,type,protective
+policy,net.no_internet_to_actuators,iec_62304_class,C
+policy,net.no_internet_to_actuators,hazard_id,HAZ-ACT-001
+policy,net.no_internet_to_actuators,control_id,CTL-ACT-001
+backend,rust.module_id,"bioaug_actuator_guard_v1"
+backend,rust.module_id.test_id,"test_safe_off_on_error"
+trace,HAZ-ACT-001,control,CTL-ACT-001
+trace,CTL-ACT-001,policy,net.no_internet_to_actuators
+trace,net.no_internet_to_actuators,backend,rust.module_id
+trace,rust.module_id,test_id,test_safe_off_on_error
+checker_rule,BioAugClinical,fail_if_uncovered_hazard,true
+checker_rule,BioAugClinical,fail_if_unverified_class_c,true
