@@ -3,13 +3,34 @@ name = "aln-syntax"
 version = "0.1.0"
 authors = ["Bio-Aug Contributors <security@bio-aug.example>"]
 edition = "2021"
+license = "MIT OR Apache-2.0"
+description = "High-performance ALN grammar and parser library built on pest for IDEs, neurotech, and virtual hardware tooling."
+repository = "https://example.com/Bio-Aug/aln-syntax"
+homepage = "https://example.com/Bio-Aug"
+documentation = "https://docs.rs/aln-syntax"
+readme = "README.md"
+keywords = ["aln", "grammar", "parser", "pest", "ide"]
+categories = ["parsing", "development-tools"]
+# Ensure reproducible builds and clarity in workspace use.
+publish = true
 
 [lib]
 name = "aln_syntax"
 path = "src/lib.rs"
+crate-type = ["rlib"]
 
 [dependencies]
 pest = "2.6"
 pest_derive = "2.6"
 serde = { version = "1.0", features = ["derive"] }
 anyhow = "1.0"
+
+[build-dependencies]
+# Optional: if you later add a build script for grammar pre-processing.
+# pest_generator = "2.6"
+
+[features]
+default = ["std"]
+std = []
+# Hook for future, no-std compatible parsing if needed in embedded/MCU targets.
+no_std = []
