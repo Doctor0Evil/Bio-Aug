@@ -1,0 +1,721 @@
+# filename: bioaug_bci_cortexshield_enriched.aln
+# destination: /aln-reference/bio-aug/modules/bci/
+
+ALNBEGIN module BioAug_BCI_CortexShield_v1_0
+
+meta {
+  id                "BioAug.BCI.CortexShield"
+  version           "1.0.0"
+  owner_namespace   "BioAug.Foundation"
+  description       "Biomechanically-safe, malware-immune BCI autonomy & security layer for augmented humans, with cross-layer quarantine and medical-grade telemetry."
+  regulatory_scope  ["FDA-Class-III", "IEC-60601", "ISO-14971", "HIPAA", "GDPR-HC"]
+  simulation_engines["UnrealEngine5", "Unity6", "Godot5"]
+  audit_ledger      "QuantumWeb5_PrivateGovChain"
+  anchorage_profile "BioAug-QA-BCI-01"
+
+  microdata {
+    schema_org_type   "SoftwareApplication"
+    name              "BioAug BCI CortexShield"
+    applicationCategory "MedicalDeviceSoftware"
+    operatingSystem   "Embedded-RTOS;Windows 10 Home 22H2"
+    processorRequired "AMD Ryzen 5 2400G or equivalent neuromorphic co-processor"
+    memoryRequired    ">= 4 GB for safety kernel runtime"
+    storageRequired   ">= 256 MB dedicated secure partition"
+    softwareVersion   "1.0.0"
+    isAccessibleForFree false
+    offers_url        "https://github.com/Doctor0Evil/Bio-Aug"
+    documentation_url "https://github.com/Doctor0Evil/Bio-Aug#bioaug-biocompatible-autonomy--security-layer-for-augmented-users"
+    jurisdiction      ["US-FDA","EU-MDR","Global-Clinical-Research"]
+    relatedLink [
+      "https://www.amd.com/en/solutions/ai.html#tabs-337eceffa5-item-cbeb164ea1-tab"
+    ]
+  }
+}
+
+################################################################################
+# 1. Device & Channel Declarations (real-world, non-fictional targets)
+################################################################################
+
+devices {
+  device "BCI_CortexArray_MedtronicStyle" {
+    class              "bci.implant.neuromorphic"
+    bus                "SPI4.secured"
+    sample_rate_hz     2000
+    channels           256
+    stimulation_max_mA 3.5
+    stimulation_max_V  10.0
+    implant_region     ["M1", "S1", "PPC"]
+    encryption         "PQC_Kyber1024+AES256-GCM"
+    firmware_mode      "signed-readonly"
+    vendor_constraints ["no-ota-without-theatre", "no-unsigned-fw"]
+
+    microdata {
+      schema_org_type "MedicalDevice"
+      medicalSpecialty ["Neurology","Rehabilitation","Neurosurgery"]
+      bodyLocation     ["MotorCortex","SomatosensoryCortex","PosteriorParietalCortex"]
+      material         ["PtIr","Si","polyimide"]
+      manufacturer     "Vendor.MedNeuroCorp"
+      serialisation    "UDI-DI-Compatible"
+      regulatoryClass  "Class_III_Implantable"
+      connectivity     ["SPI4","IsolatedPowerRail","ShieldedConnector"]
+      securityFeatures [
+        "SecureBoot",
+        "SignedFirmwareOnly",
+        "NoRemoteWriteFromInternet",
+        "OnChipPQCKeyStore"
+      ]
+    }
+  }
+
+  device "Peripheral_SensorMesh_LimbNet" {
+    class              "sensor.mesh.peripheral"
+    bus                "CAN-FD.isolated"
+    nodes              64
+    max_datapath_kbps  500
+    isolation_transform "galvanic+opto"
+
+    microdata {
+      schema_org_type "Sensor"
+      measurementTechnique ["IMU","ForceSensor","JointEncoder"]
+      isWireless          false
+      powerSource         "IsolatedDC"
+      monitoredBodyPart   ["UpperLimb","LowerLimb","Trunk"]
+      safetyRating        "IP67;IEC-60601-leakage-compliant"
+    }
+  }
+
+  device "Cardio_AutonomicHub" {
+    class              "vital.cardio-autonomic"
+    bus                "I2C.secure"
+    sample_rate_hz     512
+    metrics            ["HR", "HRV", "BP_systolic", "BP_diastolic", "SpO2", "RESP"]
+
+    microdata {
+      schema_org_type "MedicalDevice"
+      medicalSpecialty ["Cardiology","Anesthesiology","IntensiveCare"]
+      measurementTechnique ["PPG","ECG","CuffBP","ImpedanceRespiration"]
+      inVitroDiagnostic false
+      safetyCritical    true
+    }
+  }
+
+  device "Safety_NeuroCore" {
+    class              "neuromorphic.safety.kernel"
+    bus                "PCIe-Gen4.x4"
+    tdp_watts          15
+    secure_boot        true
+    allows_untrusted   false
+    role               "BioAug_SafetyKernel_Only"
+
+    microdata {
+      schema_org_type  "HardwareSecurityModule"
+      processorFamily  "NeuromorphicArray+x86_64ControlPlane"
+      cryptographicSuite["ML-KEM","SLH-DSA","AES256-GCM","SHA3-512"]
+      tamperResponse   ["ZeroizeKeys","LockdownBus","TriggerAuditEvent"]
+      trustAnchorRole  "RootOfTrustForBioAugActuation"
+    }
+  }
+}
+
+channels {
+  layer "bio.physical" {
+    scope ["cells", "tissue", "organs", "hemodynamics"]
+    quarantine_default "hard"
+
+    microdata {
+      schema_org_type "AnatomicalSystem"
+      name            "HumanPhysiologicalLayer"
+      comprisedOf     ["CardiovascularSystem","NervousSystem","MusculoskeletalSystem"]
+      dataSensitivity "PHI-Level-Red"
+    }
+  }
+
+  layer "bio.cybernetic" {
+    scope ["implants", "BCI", "prosthetics", "exoskeleton"]
+    quarantine_default "hard"
+
+    microdata {
+      schema_org_type "System"
+      name            "CyberneticInterfaceLayer"
+      purpose         "BiomechanicalAugmentationAndRestoration"
+      dependsOn       ["bio.physical","digital.ai"]
+      dataSensitivity "PHI-Level-Red"
+    }
+  }
+
+  layer "digital.ai" {
+    scope ["models", "agents", "control_code", "networks"]
+    quarantine_default "strict"
+
+    microdata {
+      schema_org_type "SoftwareApplication"
+      name            "DigitalAILayer"
+      purpose         "Inference,Prediction,DecisionSupport"
+      executionEnv    ["OnPremCluster","EdgeGateway","CloudGovVPC"]
+      internetFacing  true
+    }
+  }
+
+  layer "sim.xr" {
+    scope ["AR", "VR", "MR", "simulated_worlds"]
+    quarantine_default "absolute"
+
+    microdata {
+      schema_org_type "SoftwareApplication"
+      name            "ExtendedRealityPipeline"
+      applicationCategory ["AR","VR","MR"]
+      purpose         "RehabilitationTraining,Education,Simulation"
+      internetFacing  "configurable"
+    }
+  }
+}
+
+################################################################################
+# 2. Immutable Rights & Autonomy Guard (per-user, per-system)
+################################################################################
+
+rights_profile "AugmentedIndividual.Core" {
+  right "existence_safety" {
+    description "No augmentation may reduce physical safety, survival probability, or access to emergency care."
+    enforce {
+      on_risk_score   >= 0.8 -> trigger "SYSTEM_HARD_SHUTDOWN"
+      on_conflict     -> favor "unaugmented_physiology"
+      on_disagreement -> escalate "Human_Clinician+Ethics_Board"
+    }
+
+    microdata {
+      schema_org_type "MedicalGuideline"
+      guidelineType   "PatientSafetyRule"
+      inForce         true
+      appliesTo       "AllAugmentedUsers"
+      derivedFrom     "NIST_AI_RMF;HospitalClinicalPolicy"
+    }
+  }
+
+  right "privacy_cognition" {
+    description "No raw thought-stream, decoded intent, or non-clinical brain data can be exported off-body."
+    enforce {
+      forbid_stream "BCI.raw_LFP"   to "digital.ai"
+      forbid_stream "BCI.raw_spike" to "digital.ai"
+      allow_stream  "BCI.derived_intent" to "Safety_NeuroCore" only_if "k_anonymity>=32 && DP_epsilon<=1.0"
+    }
+
+    microdata {
+      schema_org_type "Policy"
+      policyType      "NeuralPrivacyPolicy"
+      jurisdiction    ["HIPAA","GDPR"]
+      category        ["BrainData","Biometric"]
+      exportControl   "OnDeviceOnlyExceptAggregatedDP"
+    }
+  }
+
+  right "consent_explicit_revocable" {
+    description "User consent must be explicit, logged, and revocable for every augmentation mode."
+    enforce {
+      require "UI.consent_screen" signed_by "user+clinician"
+      log_to  "QuantumWeb5_PrivateGovChain"
+      allow_mode_change only_if "consent_state==ACTIVE"
+      revoke_all_modes_on "user_revocation" -> trigger "SAFE_ROLLBACK"
+    }
+
+    microdata {
+      schema_org_type "Consent"
+      consentType     "InformedMedicalAndTechnological"
+      revocable       true
+      recordingMedium ["SignedPDF","OnDeviceLedger","RegulatorLedgerHash"]
+    }
+  }
+
+  right "self_ownership" {
+    description "User retains ownership of body, implants, and all derivative biometric profiles."
+    enforce {
+      forbid "third_party_firmware_lock"
+      forbid "non_clinical_data_sale"
+      require "data_portability_export" format ["FHIR", "DICOM", "OpenBCI"] on_request
+    }
+
+    microdata {
+      schema_org_type "Policy"
+      policyType      "DataOwnershipPolicy"
+      dataSubject     "AugmentedIndividual"
+      allowsSale      false
+      portabilityAPIs ["FHIR-R4","DICOMweb","CustomOpenBCIExport"]
+    }
+  }
+
+  right "meta_cognitive_integrity" {
+    description "No nudging, coercion, or affect manipulation beyond prescribed therapy."
+    enforce {
+      forbid "affect_modulation" origin "advertising", "political", "commercial"
+      require "therapy_protocol_id" for any "mood_regulation"
+      auto_shutdown_on "detected_pattern_coercion"
+    }
+
+    microdata {
+      schema_org_type "Policy"
+      policyType      "NeuroEthicsPolicy"
+      prohibitedUse   ["PoliticalInfluence","CommercialPersuasion","CoerciveAffectModulation"]
+      allows          ["ClinicallySupervisedTherapy"]
+    }
+  }
+
+  right "full_auditability" {
+    description "User can view explanation & full history of configuration, policies, and AI influences."
+    enforce {
+      require "explain_api" formats ["natural_language", "clinician_report", "regulator_bundle"]
+      log_all "control_decisions" to "QuantumWeb5_PrivateGovChain"
+      allow_user_audit_read true
+    }
+
+    microdata {
+      schema_org_type "Service"
+      serviceType     "ExplainabilityAndAuditPortal"
+      authentication  "StrongMFA+DeviceBinding"
+      exportFormats   ["PDF","JSON","FHIR-AuditEvent"]
+    }
+  }
+}
+
+################################################################################
+# 3. Cross-Layer Separation & Malware-Immune Safety Kernel
+################################################################################
+
+policy "LayerBoundary.Enforcement" {
+  description "Hard separation between biological, cybernetic, digital, and simulated domains."
+
+  microdata {
+    schema_org_type "Policy"
+    policyType      "CrossLayerQuarantine"
+    enforcementPoint["Safety_NeuroCore","SecureGatewayFirewall"]
+    immutability    "LedgerAnchored;ChangeByMultisigOnly"
+  }
+
+  rule "no_direct_internet_to_bio" {
+    match {
+      source.layer  "digital.ai"
+      source.origin ["internet", "cloud", "3rdparty_model"]
+      target.layer  ["bio.cybernetic", "bio.physical"]
+      target.action ["stimulate", "move", "override_autonomic"]
+    }
+    action {
+      deny
+      quarantine "digital.ai.session"
+      log "attempted_cross_layer_violation"
+      trigger "FORENSIC_AUDIT"
+    }
+
+    microdata {
+      ruleCategory "NetworkIsolationRule"
+      severity     "Critical"
+      rationale    "PreventRemoteMalwareFromAffectingPhysiology"
+    }
+  }
+
+  rule "sim_xr_cannot_drive_muscle_primitive" {
+    match {
+      source.layer "sim.xr"
+      target.layer "bio.cybernetic"
+      target.action ["muscle_primitive", "gait_pattern", "reflex_arc"]
+    }
+    action {
+      deny
+      trigger "XR_SESSION_SOFT_SHUTDOWN"
+      log "blocked_xr_muscle_control"
+    }
+
+    microdata {
+      ruleCategory "XRBoundaryRule"
+      rationale    "PreventMotionControlFromSimulatedWorlds"
+      allowedUsage "PerceptualFeedbackOnly"
+    }
+  }
+
+  rule "only_SafetyKernel_can_issue_actuation" {
+    match {
+      source.device !="Safety_NeuroCore"
+      target.device "BCI_CortexArray_MedtronicStyle"
+      target.action ["stimulate", "write_DAC"]
+    }
+    action {
+      deny
+      log "non_kernel_actuation_attempt"
+      trigger "SYSTEM_HARD_SHUTDOWN"
+    }
+
+    microdata {
+      ruleCategory "ActuationControlRule"
+      controlOwner "Safety_NeuroCore"
+      functionalSafetyLevel "ASIL-D-Equivalent"
+    }
+  }
+}
+
+kernel "BioAug_SafetyKernel_Only" {
+  host_device "Safety_NeuroCore"
+
+  properties {
+    immutable_firmware true
+    allowed_update_mode "theatre_only+multisig+regulator"
+    accepts_downloaded_code false
+  }
+
+  microdata {
+    schema_org_type "SoftwareApplication"
+    applicationCategory "SafetyKernel"
+    runtimeIsolation "HWEnforced;NoJIT;NoDynamicCodeLoading"
+    loggingTarget    "QuantumWeb5_PrivateGovChain"
+  }
+
+  capabilities {
+
+    function "verify_signed_policy_bundle" {
+      inputs  ["policy_bundle.bin"]
+      outputs ["verified_bundle"]
+      steps {
+        verify_signature scheme "SLH-DSA" key_class "regulator+vendor+hospital"
+        verify_hash      algo "SHA3-512"
+        if_fail { reject_bundle; raise "POLICY_REJECTED"; }
+      }
+
+      microdata {
+        functionRole   "PolicyIntegrityCheck"
+        inputChecksum  "Required"
+        traceabilityID "POLICY-BUNDLE-VERIFY"
+      }
+    }
+
+    function "gate_actuation_primitive" {
+      inputs  ["desired_stim_pattern", "patient_state_vector", "policy_state"]
+      outputs ["approved_stim_pattern"]
+      steps {
+        enforce_bounds   max_V 10.0  max_mA 3.5 max_freq_hz 250
+        check_risk_model source "local_neurocore_model"  threshold 0.7
+        if_risk_ge       0.7 { zero_pattern; raise "RISK_BLOCKED"; }
+        write_log        "actuation_decision" to "QuantumWeb5_PrivateGovChain"
+      }
+
+      microdata {
+        functionRole   "SafetyGateForCorticalActuation"
+        safetyModelRef "DS01_BCI_Stimulation_Safety_Envelope"
+        failSafeMode   "ZeroOutput"
+      }
+    }
+
+    function "cross_layer_quarantine" {
+      inputs  ["event"]
+      outputs ["quarantine_ticket_id"]
+      steps {
+        classify_event    model "anomaly_crosslayer_v1"
+        if_class_in       ["malware_suspect", "policy_violation"] {
+          isolate_session   layers ["digital.ai", "sim.xr"]
+          freeze_interfaces devices ["BCI_CortexArray_MedtronicStyle","Peripheral_SensorMesh_LimbNet"]
+          snapshot_state    to "forensic_vault"
+          emit_metric       "bioaug_quarantine_events_total++"
+        }
+      }
+
+      microdata {
+        functionRole   "IncidentResponse"
+        ticketSystem   "BioAug-Forensic-IR"
+        linkageDataset "DS02_Anomaly_CrossLayer_Log"
+      }
+    }
+
+    function "safe_removal_rollback" {
+      inputs  ["module_id", "reason"]
+      outputs ["rollback_status"]
+      steps {
+        require_multisig signers ["clinician", "hospital_CISO", "regulator_node"]
+        anchor_request   chain "QuantumWeb5_PrivateGovChain"
+        disable_module   id "module_id"
+        restore_last_safe_snapshot id "module_id"
+        log "safe_removal" fields ["module_id","reason","timestamp"]
+      }
+
+      microdata {
+        functionRole "SafeRemovalAndRollback"
+        auditTrail   "BlockchainAnchored"
+        regulatoryTag["EULA-V24.x","SafeRemovalWorkflow"]
+      }
+    }
+  }
+}
+
+################################################################################
+# 4. Biocompatible Safety Datasets (research-grade, real-world structure)
+################################################################################
+
+dataset "DS01_BCI_Stimulation_Safety_Envelope" {
+  description "Regulatory-grade envelope of safe cortical stimulation parameters under varying tissue and patient conditions, for use only inside SafetyKernel."
+  modality     ["time_series", "tabular"]
+  source       ["in-human_clinical_trials", "animal_models", "digital_twin_sims"]
+
+  schema {
+    field "patient_id_hash"        type "string" constraints ["pseudonymous"]
+    field "age_years"              type "int"    range [18, 85]
+    field "diagnosis_icd10"        type "string"
+    field "cortical_region"        type "enum"   values ["M1","S1","PPC","V1","A1"]
+    field "tissue_impedance_kOhm"  type "float"  range [0.5, 20.0]
+    field "stimulation_V"          type "float"  range [0.0, 15.0]
+    field "stimulation_mA"         type "float"  range [0.0, 5.0]
+    field "pulse_width_us"         type "float"  range [10.0, 1000.0]
+    field "frequency_hz"           type "float"  range [0.1, 500.0]
+    field "session_duration_min"   type "float"  range [0.1, 240.0]
+    field "acute_adverse_event"    type "bool"
+    field "chronic_adverse_event"  type "bool"
+    field "regulatory_flag"        type "enum"   values ["APPROVED","CAUTION","FORBIDDEN"]
+  }
+
+  constraints {
+    forbid_use_for "off-label_consumer_stimulation"
+    require_review_by ["IEC60601_committee","IRB"]
+  }
+
+  deployment {
+    visible_to ["Safety_NeuroCore"]
+    hidden_from["digital.ai", "sim.xr", "consumer_apps"]
+    update_mode "append_only+regulator_signed"
+  }
+
+  microdata {
+    schema_org_type "Dataset"
+    name            "BCI Stimulation Safety Envelope"
+    license         "ClinicalUseOnly"
+    dataUse         ["RiskModelTraining","RegulatoryReporting","SafetyKernelLookup"]
+    accessLevel     "RestrictedClinical"
+    anonymisation   "HashedIDs+KAnonymity"
+  }
+}
+
+dataset "DS02_Anomaly_CrossLayer_Log" {
+  description "High-resolution log of attempted cross-layer violations, sanitized for research and regulator use."
+  modality     ["event_log"]
+  schema {
+    field "event_id"           type "uuid"
+    field "timestamp_utc"      type "datetime"
+    field "source_layer"       type "enum" values ["bio.physical","bio.cybernetic","digital.ai","sim.xr"]
+    field "source_component"   type "string"
+    field "target_layer"       type "enum"
+    field "action"             type "string"
+    field "risk_score"         type "float" range [0.0,1.0]
+    field "kernel_decision"    type "enum"  values ["ALLOW","DENY","QUARANTINE"]
+    field "quarantine_ticket"  type "string"
+    field "hash_chain_prev"    type "string"
+    field "hash_chain_curr"    type "string"
+  }
+  retention {
+    min_years 10
+    compliance_tags ["FDA","EMA","HIPAA","NIST-AI-RMF"]
+  }
+
+  microdata {
+    schema_org_type "Dataset"
+    name            "Cross-Layer Anomaly Log"
+    description     "Tamper-evident record of attempted cross-layer violations for forensic analysis."
+    storageBackend  "QuantumWeb5_PrivateGovChain"
+    piiContent      "NoneAfterSanitization"
+  }
+}
+
+dataset "DS03_Patient_State_Vector" {
+  description "Multimodal vector of patient state used for real-time risk assessment and actuation gating."
+  modality     ["time_series"]
+  sampling_hz  50
+  schema {
+    field "HR"                type "float" range [30, 200]
+    field "HRV_ms"            type "float" range [10, 250]
+    field "BP_systolic"       type "float" range [70, 220]
+    field "SpO2_pct"          type "float" range [70, 100]
+    field "RESP_bpm"          type "float" range [5, 40]
+    field "EEG_alpha_power"   type "float" range [0.0, 1.0]
+    field "EEG_beta_power"    type "float" range [0.0, 1.0]
+    field "stress_index"      type "float" range [0.0, 1.0]
+    field "sedation_level"    type "enum"  values ["NONE","MILD","MODERATE","DEEP"]
+    field "motor_intent_flag" type "enum"  values ["REST","VOLUNTARY","INVOLUNTARY"]
+  }
+
+  use_in {
+    model "risk_model_autonomic_collapse"
+    model "risk_model_seizure"
+    gate  "gate_actuation_primitive"
+  }
+
+  privacy {
+    store_locally_only true
+    export_only_as     "aggregated+DP" epsilon 0.5
+  }
+
+  microdata {
+    schema_org_type "Dataset"
+    name            "Real-Time Patient State Vector"
+    dataOrigin      ["BedsideMonitors","BCI","WearablesExcludedForBioAug"]
+    updateFrequency "20ms"
+    phiCategory     "High"
+  }
+}
+
+################################################################################
+# 5. Platform-Agnostic Simulation Hooks (Unreal, Unity, Godot)
+################################################################################
+
+simulation_bindings "XR_DigitalTwin" {
+  engine "UnrealEngine5" {
+    map_signal "BCI_CortexArray_MedtronicStyle.LFP" to "UE5.Blueprint.SignalBus.LFP"
+    map_signal "Peripheral_SensorMesh_LimbNet.joint_angle" to "UE5.AnimGraph.JointTarget"
+    enforce_mode "read_only"
+  }
+
+  engine "Unity6" {
+    map_signal "DS03_Patient_State_Vector" to "Unity.C# Scripts/PatientState.cs"
+    enforce_mode "shadow_simulation"
+  }
+
+  engine "Godot5" {
+    map_signal "DS02_Anomaly_CrossLayer_Log" to "Godot.GDScript/TelemetryConsole.gd"
+    enforce_mode "audit_dashboard"
+  }
+
+  safety {
+    forbid "physics_to_realworld"
+    require "BioAug_SafetyKernel_Only" signoff_before "real_deployment"
+  }
+
+  microdata {
+    schema_org_type "SoftwareApplication"
+    name            "BioAug XR Digital Twin"
+    applicationCategory ["Simulation","DigitalTwin"]
+    requiredEngines ["UnrealEngine5","Unity6","Godot5"]
+    integrationURL  "https://github.com/Doctor0Evil/Bio-Aug/tree/main/sim"
+  }
+}
+
+################################################################################
+# 6. Governance, Metrics & CI Hooks (daily research cycles)
+################################################################################
+
+governance {
+  roles {
+    role "Augmented_User" {
+      rights_profile "AugmentedIndividual.Core"
+      can {
+        view "personal_audit_log"
+        request "full_shutdown"
+        export "own_data"
+      }
+    }
+
+    role "Clinician" {
+      can {
+        adjust "therapy_params" within "DS01_BCI_Stimulation_Safety_Envelope"
+        trigger "SAFE_ROLLBACK"
+      }
+      cannot {
+        disable "BioAug_SafetyKernel_Only"
+      }
+    }
+
+    role "Regulator" {
+      can {
+        read "DS02_Anomaly_CrossLayer_Log"
+        sign "policy_bundle.bin"
+        demand "forensic_snapshot"
+      }
+    }
+
+    role "Developer" {
+      can {
+        submit "models" to "sandbox_only"
+      }
+      cannot {
+        push_code_to "Safety_NeuroCore"
+        bypass "LayerBoundary.Enforcement"
+      }
+    }
+  }
+
+  audit_metrics {
+    prometheus_namespace "bioaug_bci"
+    counter  "quarantine_events_total"   help "Total number of cross-layer quarantine events."
+    counter  "actuation_blocks_total"    help "Total number of blocked stimulation attempts."
+    gauge    "patient_risk_score"        help "Current estimated risk score 0-1."
+    histogram"actuation_intensity"       buckets [0.1,0.5,1.0,2.0,3.5]
+  }
+
+  ci_hooks {
+    script "tools/daily_research_cycle.sh"
+    script "tools/daily_cybernetic_cycle.sh"
+    script "tools/daily_adjacent_cycle.sh"
+    outputs_dirs ["aln-reference/","generated/","research-logs/"]
+  }
+
+  microdata {
+    schema_org_type "Governance"
+    oversightBodies ["HospitalIRB","NationalRegulator","EthicsBoard"]
+    auditFrequency  "Quarterly+OnEvent"
+    metricsExport   "PrometheusExposition+RegulatorReports"
+  }
+}
+
+################################################################################
+# 7. Safe OTA & Neuromorphic Firmware Update Profile (non-bypassable)
+################################################################################
+
+ota_profile "Neuromorphic_OTA_BioAugSafe" {
+  applies_to_devices ["BCI_CortexArray_MedtronicStyle","Safety_NeuroCore"]
+
+  constraints {
+    require "operating_room_or_certified_lab"
+    require_multisig ["Clinician","HospitalCISO","RegulatorNode"]
+    require "patient_explicit_consent"
+    forbid "internet_direct_path"
+  }
+
+  steps {
+    step 1 "enter_safe_mode" {
+      action {
+        freeze "all_actuation"
+        enable "monitoring_only"
+        verify "backup_snapshot_present"
+      }
+    }
+
+    step 2 "signature_and_hash_verification" {
+      action {
+        verify_signature scheme "SLH-DSA"
+        verify_hash      algo "SHA3-512"
+        if_fail { abort_update; restore_snapshot; }
+      }
+    }
+
+    step 3 "install_candidate_fw" {
+      action {
+        write_to "staging_partition"
+        run "hardware_self_test"
+      }
+    }
+
+    step 4 "progressive_enablement" {
+      action {
+        run "digital_twin_simulation"  duration ">=24h"
+        monitor "DS03_Patient_State_Vector"
+        require "zero_adverse_flags"
+      }
+    }
+
+    step 5 "commit_or_rollback" {
+      action {
+        if "all_checks_pass" { commit_fw; log_to "QuantumWeb5_PrivateGovChain"; }
+        else { rollback; log "rollback_event"; }
+      }
+    }
+  }
+
+  microdata {
+    schema_org_type "UpdateAction"
+    firmwareChannel  "ClinicalControlled"
+    rollbackSupported true
+    safetyValidation  "DigitalTwin+OnDeviceTests"
+  }
+}
+
+ALNEND
