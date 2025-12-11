@@ -1,0 +1,50 @@
+module RemExclusionPolicy_v1_0_0 {
+
+    constants {
+        POLICY_ID              : "99999999-9999-4999-8999-999999999999";
+        POLICY_LABEL           : "REM-EXCLUDED-NEURO-AR-LAB";
+        POLICY_VERSION         : "1.0.0";
+        POLICY_DESCRIPTION     : "Hard exclusion of REM sleep and dream-phase integrations " +
+                                 "from neuromorphic AR/VR lab workflows.";
+    }
+
+    entity StudyDescriptor {
+        id                     : uuid;
+        study_code             : string;
+        title                  : string;
+        study_type             : enum["GAIT","POSTURE","COGNITIVE_AR","BIOSENSE","OTHER"];
+        rem_sleep_allowed      : bool; // must be false
+    }
+
+    entity SessionDescriptor {
+        id                     : uuid;
+        study_id               : uuid;
+        purpose                : string;
+        rem_flag               : bool; // must be false
+    }
+
+    behavior_tree RemExclusionGuardTree {
+        root "rem_exclusion_root" {
+
+            branch "study_guard" {
+                node "block_rem_studies"
+                    -> filter(StudyDescriptor.rem_sleep_allowed == false);
+            }
+
+            branch "session_guard" {
+                node "block_rem_sessions"
+                    -> filter(SessionDescriptor.rem_flag == false);
+            }
+        }
+    }
+
+    service RemExclusionDescriptorService {
+        op validate_study(StudyDescriptor) -> bool {
+            // Caller must enforce rem_sleep_allowed == false.
+        }
+
+        op validate_session(SessionDescriptor) -> bool {
+            // Caller must enforce rem_flag == false.
+        }
+    }
+}
