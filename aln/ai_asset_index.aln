@@ -1,0 +1,102 @@
+module AiAssetIndexRegistry_v1_0_0 {
+    // Core configuration for neuromorphic / augmented‑user environments
+    constants {
+        REGISTRY_ID              : "ffffffff-ffff-4fff-8fff-fffffffffff1";
+        REGISTRY_COMPLIANCE_TAG  : "GMP-CLASS-A-AI-ASSET";
+        REGISTRY_QPU_MIN_TOPS    : 1000.000;          // minimal aggregate compute capacity
+        REGISTRY_LATENCY_BUDGET_MS : 12.000;          // end‑to‑end lookup budget
+        REGISTRY_HEX_FINGERPRINT : "B4E2D7A1C9F0837AD1E4B6C3F9A2D5E1B7C8D9F0A3E6B1C4D7F2A9E0C5B8D3F6";
+    }
+
+    // Biocompatibility / safety envelope for AI‑augmented human use
+    biocompatibility_matrix AiAssetBioProfile {
+        // Normalized 0.0–1.0 safety factors across key domains
+        neural_interface_safety[]    : [0.98,0.97,0.96,0.95,0.97,0.96,0.95,0.94];
+        cognitive_overload_risk[]    : [0.05,0.07,0.08,0.09,0.06,0.07,0.08,0.10];
+        privacy_leakage_risk[]       : [0.03,0.04,0.05,0.06,0.04,0.05,0.06,0.07];
+        clinical_evidence_strength[] : [0.82,0.84,0.86,0.88,0.83,0.85,0.87,0.89];
+    }
+
+    // Hex‑encoded behavioral signature for verification and tamper‑evidence
+    hex_dataset AiAssetBehaviorSignature {
+        feature_vector_256bit : "DDDDDDDDDDDD4DDD8DDDDDDDDDDD4DDD8DDDDDDDDDDD4DDD8DDDDDDDDDDD4DDD8";
+    }
+
+    // Primary entity: a single AI asset description
+    entity AiAsset {
+        id                       : uuid;         // stable asset UUID
+        name                     : string;       // human‑readable label
+        provider                 : string;       // e.g. GitHub org / project
+        modality                 : enum["text","vision","audio","multimodal","control","biosignal"];
+        interface_profile        : enum["cli","rest","grpc","on_device","embedded_fpga","neurolink"];
+        license_class            : enum["permissive","copyleft","proprietary","clinical_restricted"];
+        safety_level             : enum["experimental","research","clinical_pilot","clinical_production"];
+        version_tag              : string;       // semantic version or git SHA
+        aln_schema_uri           : string;       // ALN definition / documentation URI
+        github_repo_uri          : string;       // repository URL or equivalent
+        documentation_uri        : string;       // public docs URL
+        device_profile           : string;       // e.g. "neuro_nanoswarm_v1"
+        ops_threshold_tops       : float;        // minimal required TOPS
+        latency_budget_ms        : float;        // per‑inference latency budget
+        max_power_watts          : float;        // thermal / power envelope
+        hexa_fingerprint         : string;       // 64‑char SHA‑256 or TPM‑bound ID
+        loinc_code               : string;       // optional clinical coding
+        snomed_ct_code           : string;       // optional clinical coding
+        created_at_utc           : timestamp;
+        updated_at_utc           : timestamp;
+        is_clinically_validated  : bool;
+        is_public_discoverable   : bool;
+    }
+
+    // Rich mapping / indexing structures to support discovery
+    behavior_tree AiAssetDiscoveryTree {
+        root "ai_asset_discovery" {
+            branch "by_modality" {
+                node "text"      -> filter(AiAsset.modality == "text");
+                node "vision"    -> filter(AiAsset.modality == "vision");
+                node "audio"     -> filter(AiAsset.modality == "audio");
+                node "multimodal"-> filter(AiAsset.modality == "multimodal");
+            }
+            branch "by_safety_level" {
+                node "clinical_production" -> filter(AiAsset.safety_level == "clinical_production");
+                node "clinical_pilot"      -> filter(AiAsset.safety_level == "clinical_pilot");
+                node "research"            -> filter(AiAsset.safety_level == "research");
+                node "experimental"        -> filter(AiAsset.safety_level == "experimental");
+            }
+            branch "by_device_profile" {
+                node "neuro_nanoswarm_v1"  -> filter(AiAsset.device_profile == "neuro_nanoswarm_v1");
+                node "edge_fpga"           -> filter(AiAsset.interface_profile == "embedded_fpga");
+            }
+            branch "by_compliance" {
+                node "clinically_validated" -> filter(AiAsset.is_clinically_validated == true);
+                node "public_discoverable"  -> filter(AiAsset.is_public_discoverable == true);
+            }
+        }
+    }
+
+    // Public ALN‑level operations for GitHub or any external orchestrator
+    service AiAssetIndexService {
+        op register_asset(input: AiAsset) -> AiAsset {
+            require input.ops_threshold_tops >= REGISTRY_QPU_MIN_TOPS;
+            require length(input.hexa_fingerprint) == 64;
+            require input.latency_budget_ms <= REGISTRY_LATENCY_BUDGET_MS;
+            // Additional clinical guardrails:
+            require input.safety_level != "clinical_production"
+                    or (input.is_clinically_validated == true);
+        }
+
+        op update_asset(input: AiAsset) -> AiAsset {
+            require input.id != null;
+            require length(input.hexa_fingerprint) == 64;
+        }
+
+        op search_assets(
+            modality        : optional string,
+            safety_level    : optional string,
+            device_profile  : optional string,
+            text_query      : optional string
+        ) -> list<AiAsset> {
+            // Abstract; implemented by SQL / backing store
+        }
+    }
+}
