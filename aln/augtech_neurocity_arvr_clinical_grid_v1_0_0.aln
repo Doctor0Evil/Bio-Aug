@@ -1,0 +1,303 @@
+module AugTechNeuroCityArVrClinicalGrid_v1_0_0 {
+
+    // ------------------------------------------------------------------
+    // 1. Global registry (no secrets, public descriptors only)
+    // ------------------------------------------------------------------
+    constants {
+        REGISTRY_ID                  : "ffffffff-ffff-4fff-8fff-fffffffffff9";
+        REGISTRY_LABEL               : "AugTech-NeuroCity-ARVR-Clinical-Grid";
+        REGISTRY_VERSION             : "1.0.0";
+        REGISTRY_COMPLIANCE_TAG      : "XR-CLINICAL-CLASS-A";
+        REGISTRY_MAX_RT_LATENCY_MS   : 50.000;    // visual-haptic upper bound for AR tasks[web:41]
+        REGISTRY_MAX_RT_LATENCY_HARD_MS : 300.000;
+        REGISTRY_HEX_FINGERPRINT_256 : "F1A2B3C4D5E6F70819AB2CD3EF40516273849ABCDEF0123456789ABCDEF0FEDC";
+    }
+
+    biocompatibility_matrix ArVrClinicalSafetyEnvelope {
+        cybersickness_risk_by_fov[][] : [
+            [0.04,0.05,0.06,0.08],   // low FOV tasks
+            [0.06,0.07,0.09,0.12],   // medium FOV
+            [0.10,0.12,0.15,0.18]    // wide FOV, higher risk[web:35][web:44]
+        ];
+        eye_strain_risk_by_luminance[][] : [
+            [0.03,0.04,0.05],
+            [0.05,0.06,0.07],
+            [0.07,0.08,0.10]
+        ];
+        collision_risk_by_occlusion[][] : [
+            [0.02,0.03,0.04],
+            [0.04,0.06,0.08],
+            [0.06,0.08,0.10]
+        ];
+        privacy_leakage_risk_by_scene[][] : [
+            [0.03,0.03,0.04],  // ed‑training
+            [0.04,0.05,0.06],  // outpatient
+            [0.06,0.07,0.09]   // OR / ICU
+        ];
+    }
+
+    hex_dataset ArVrGridFingerprints {
+        headset_grid_1_256   : "AB12CD34EF56AB78CD90EF12AB34CD56EF7890AB12CD34EF56AB78CD90EF12AB";
+        headset_grid_2_256   : "CD34EF56AB78CD90EF12AB34CD56EF7890AB12CD34EF56AB78CD90EF12AB34CD";
+        scene_grid_1_128     : "9A2D5E1B7C8D9F0A3E6B1C4D7F2A93F";
+        input_grid_1_128     : "1E4B6C3F9A2D5E1B7C8D9F0A3E6B1C4";
+        qos_grid_1_128       : "D7F2A9E0C5B8D3F6B4E2D7A1C9F0837";
+    }
+
+    // ------------------------------------------------------------------
+    // 2. AR/VR device profiles for clinical use
+    // ------------------------------------------------------------------
+    entity ArVrDeviceProfile {
+        id                      : uuid;
+        logical_name            : string;
+        xr_mode                 : enum["AR","VR","MR"];
+        class                   : enum["HEADSET","WALL_DISPLAY","TABLET","SURGICAL_CONSOLE"];
+        description             : string;
+        // Core performance envelope
+        min_refresh_hz          : float;
+        max_refresh_hz          : float;
+        pixel_density_ppd       : float;
+        stereo_fov_deg[]        : list<float>;    // [horizontal, vertical]
+        max_brightness_nits     : float;
+        // Network / compute for smart‑hospital deployment
+        min_uplink_mbps         : float;
+        min_downlink_mbps       : float;
+        max_roundtrip_latency_ms: float;
+        // Public attestation fingerprint (non‑secret)
+        hex_fingerprint_256     : string;
+    }
+
+    const ARVR_DEVICES[] : list<ArVrDeviceProfile> = [
+        {
+            id                      : "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaa001",
+            logical_name            : "ar_surgical_overlay_hud_v1",
+            xr_mode                 : "AR",
+            class                   : "HEADSET",
+            description             : "Optical-see-through AR headset for in-theatre surgical overlays.",
+            min_refresh_hz          : 72.0,
+            max_refresh_hz          : 120.0,
+            pixel_density_ppd       : 22.0,
+            stereo_fov_deg          : [90.0, 60.0],
+            max_brightness_nits     : 1000.0,
+            min_uplink_mbps         : 50.0,
+            min_downlink_mbps       : 100.0,
+            max_roundtrip_latency_ms: 50.0,
+            hex_fingerprint_256     : ArVrGridFingerprints.headset_grid_1_256
+        },
+        {
+            id                      : "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaa002",
+            logical_name            : "vr_preop_planning_rig_v1",
+            xr_mode                 : "VR",
+            class                   : "HEADSET",
+            description             : "Room‑scale VR rig for pre‑operative planning and rehearsal.",
+            min_refresh_hz          : 90.0,
+            max_refresh_hz          : 144.0,
+            pixel_density_ppd       : 20.0,
+            stereo_fov_deg          : [110.0, 90.0],
+            max_brightness_nits     : 200.0,
+            min_uplink_mbps         : 20.0,
+            min_downlink_mbps       : 50.0,
+            max_roundtrip_latency_ms: 100.0,
+            hex_fingerprint_256     : ArVrGridFingerprints.headset_grid_2_256
+        },
+        {
+            id                      : "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaa003",
+            logical_name            : "ar_ward_rounds_tablet_v1",
+            xr_mode                 : "AR",
+            class                   : "TABLET",
+            description             : "Handheld AR tablet for ward rounds and point-of-care imaging.",
+            min_refresh_hz          : 60.0,
+            max_refresh_hz          : 90.0,
+            pixel_density_ppd       : 15.0,
+            stereo_fov_deg          : [70.0, 50.0],
+            max_brightness_nits     : 800.0,
+            min_uplink_mbps         : 10.0,
+            min_downlink_mbps       : 25.0,
+            max_roundtrip_latency_ms: 150.0,
+            hex_fingerprint_256     : "EF56AB78CD90EF12AB34CD56EF7890AB12CD34EF56AB78CD90EF12AB34CD56EF"
+        }
+    ];
+
+    // ------------------------------------------------------------------
+    // 3. Clinical scene definitions (imaging, guidance, education)
+    // ------------------------------------------------------------------
+    entity ArVrClinicalSceneProfile {
+        id                          : uuid;
+        logical_name                : string;
+        category                    : enum["SURGICAL_GUIDANCE","PREOP_PLANNING","EDUCATION","WARD_SUPPORT"];
+        description                 : string;
+        // Imaging / modality expectations
+        supported_modalities[]      : list<string>; // e.g. "CT","MRI","US","EEG","XRAY"
+        max_overlay_lag_ms          : float;       // head‑motion to overlay update[web:37][web:44]
+        max_stream_latency_ms       : float;       // imaging stream path
+        max_jitter_ms               : float;
+        // Safety thresholds
+        max_session_minutes         : int64;
+        requires_supervision        : bool;
+        privacy_mask_required       : bool;
+        hex_scene_fingerprint_128   : string;
+    }
+
+    const ARVR_SCENES[] : list<ArVrClinicalSceneProfile> = [
+        {
+            id                        : "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbb001",
+            logical_name              : "scene_surgical_overlay_or_v1",
+            category                  : "SURGICAL_GUIDANCE",
+            description               : "Intra‑operative overlay of segmented anatomy, instruments, and navigation paths.",
+            supported_modalities      : ["CT","MRI","US"],
+            max_overlay_lag_ms        : 20.0,
+            max_stream_latency_ms     : 100.0,
+            max_jitter_ms             : 10.0,
+            max_session_minutes       : 240,
+            requires_supervision      : true,
+            privacy_mask_required     : true,
+            hex_scene_fingerprint_128 : ArVrGridFingerprints.scene_grid_1_128
+        },
+        {
+            id                        : "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbb002",
+            logical_name              : "scene_preop_planning_vr_v1",
+            category                  : "PREOP_PLANNING",
+            description               : "VR‑based 3D rehearsal of planned procedures using fused imaging data.",
+            supported_modalities      : ["CT","MRI","XRAY"],
+            max_overlay_lag_ms        : 40.0,
+            max_stream_latency_ms     : 150.0,
+            max_jitter_ms             : 15.0,
+            max_session_minutes       : 90,
+            requires_supervision      : false,
+            privacy_mask_required     : true,
+            hex_scene_fingerprint_128 : "7C8D9F0A3E6B1C4D7F2A93F9A2D5E1B"
+        }
+    ];
+
+    // ------------------------------------------------------------------
+    // 4. Input / interaction safety grid (controllers, gestures)
+    // ------------------------------------------------------------------
+    entity ArVrInputProfile {
+        id                      : uuid;
+        logical_name            : string;
+        device_class            : enum["CONTROLLER","HAND_TRACKING","VOICE","EYE_GAZE"];
+        description             : string;
+        max_clicks_per_min      : int64;
+        max_grip_force_n        : float;
+        requires_phys_barrier   : bool;
+        max_gesture_complexity  : int64;
+        hex_input_fingerprint_128 : string;
+    }
+
+    const ARVR_INPUTS[] : list<ArVrInputProfile> = [
+        {
+            id                        : "cccccccc-cccc-4ccc-8ccc-cccccccccc01",
+            logical_name              : "controller_or_sterile_v1",
+            device_class              : "CONTROLLER",
+            description               : "Sterilizable controller for OR use with limited gesture set.",
+            max_clicks_per_min        : 60,
+            max_grip_force_n          : 40.0,
+            requires_phys_barrier     : true,
+            max_gesture_complexity    : 4,
+            hex_input_fingerprint_128 : ArVrGridFingerprints.input_grid_1_128
+        },
+        {
+            id                        : "cccccccc-cccc-4ccc-8ccc-cccccccccc02",
+            logical_name              : "hand_tracking_ward_v1",
+            device_class              : "HAND_TRACKING",
+            description               : "Markerless hand tracking for ward‑round AR annotations.",
+            max_clicks_per_min        : 120,
+            max_grip_force_n          : 0.0,
+            requires_phys_barrier     : false,
+            max_gesture_complexity    : 6,
+            hex_input_fingerprint_128 : "5E1B7C8D9F0A3E6B1C4D7F2A93F9A2D"
+        }
+    ];
+
+    // ------------------------------------------------------------------
+    // 5. QoS / infrastructure profile (smart‑hospital grid)
+    // ------------------------------------------------------------------
+    entity ArVrQoSProfile {
+        id                      : uuid;
+        logical_name            : string;
+        description             : string;
+        // Multi-band latency and bandwidth targets for hospital domains[web:41][web:43]
+        domain_names[]          : list<string>;  // e.g. "OR","ICU","WARD","EDU"
+        max_rtt_ms[]            : list<float>;
+        min_uplink_mbps[]       : list<float>;
+        min_downlink_mbps[]     : list<float>;
+        max_packet_loss_pct[]   : list<float>;
+        hex_qos_fingerprint_128 : string;
+    }
+
+    const ARVR_QOS_GRID : ArVrQoSProfile = {
+        id                      : "dddddddd-dddd-4ddd-8ddd-dddddddddd01",
+        logical_name            : "smart_hospital_xr_qos_v1",
+        description             : "QoS constraints for XR in OR, ICU, ward, and education domains.",
+        domain_names            : ["OR","ICU","WARD","EDU"],
+        max_rtt_ms              : [50.0, 80.0, 120.0, 200.0],
+        min_uplink_mbps         : [50.0, 30.0, 10.0, 5.0],
+        min_downlink_mbps       : [100.0, 50.0, 25.0, 10.0],
+        max_packet_loss_pct     : [0.10, 0.20, 0.50, 1.00],
+        hex_qos_fingerprint_128 : ArVrGridFingerprints.qos_grid_1_128
+    };
+
+    // ------------------------------------------------------------------
+    // 6. Behavior tree: safe mappings (no control, only constraints)
+    // ------------------------------------------------------------------
+    behavior_tree ArVrClinicalMappingGuards {
+        root "arvr_clinical_mapping" {
+
+            branch "by_scene_category" {
+                node "surgical_guidance"
+                    -> filter(ArVrClinicalSceneProfile.category == "SURGICAL_GUIDANCE");
+                node "preop_planning"
+                    -> filter(ArVrClinicalSceneProfile.category == "PREOP_PLANNING");
+                node "education"
+                    -> filter(ArVrClinicalSceneProfile.category == "EDUCATION");
+                node "ward_support"
+                    -> filter(ArVrClinicalSceneProfile.category == "WARD_SUPPORT");
+            }
+
+            branch "by_latency_budget" {
+                node "strict_rt"
+                    -> filter(ArVrClinicalSceneProfile.max_overlay_lag_ms
+                              <= REGISTRY_MAX_RT_LATENCY_MS);
+                node "non_critical"
+                    -> filter(ArVrClinicalSceneProfile.max_overlay_lag_ms
+                              > REGISTRY_MAX_RT_LATENCY_MS);
+            }
+
+            branch "device_suitability" {
+                node "or_ar_headset"
+                    -> filter(ArVrDeviceProfile.logical_name == "ar_surgical_overlay_hud_v1"
+                              and ArVrDeviceProfile.max_roundtrip_latency_ms
+                                  <= REGISTRY_MAX_RT_LATENCY_MS);
+                node "vr_planning"
+                    -> filter(ArVrDeviceProfile.logical_name == "vr_preop_planning_rig_v1");
+            }
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // 7. Service: descriptor-only API for professional use
+    // ------------------------------------------------------------------
+    service ArVrClinicalDescriptorService {
+
+        op list_devices() -> list<ArVrDeviceProfile> {
+            // Descriptor enumeration only; no secrets or live control.
+        }
+
+        op list_scenes() -> list<ArVrClinicalSceneProfile> {
+        }
+
+        op list_inputs() -> list<ArVrInputProfile> {
+        }
+
+        op get_qos_grid() -> ArVrQoSProfile {
+        }
+
+        op recommend_device_for_scene(
+            scene_name : string,
+            domain     : string
+        ) -> optional ArVrDeviceProfile {
+            // Implemented by matching scene constraints, device performance,
+            // and ARVR_QOS_GRID entries; no network actions or mutable state.
+        }
+    }
+}
