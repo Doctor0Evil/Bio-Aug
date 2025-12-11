@@ -1,0 +1,113 @@
+aln dataset NanoNeuro.Datasets.v1
+
+record Subject {
+  id         : string
+  species    : string    # 'mouse','human',...
+  condition  : string    # 'healthy','epilepsy',...
+  age_weeks  : u16
+}
+
+record Stimulus {
+  id         : string
+  env_id     : string
+  modality   : string    # 'NIR','magnetic','ultrasound'
+  freq_hz    : f32
+  intensity  : f32
+  pulse_ms   : f32
+  duty_cycle : f32
+  pulses     : u32
+}
+
+record Session {
+  id         : string
+  subject_id : string
+  env_id     : string
+  start_time : string
+  end_time   : string
+}
+
+record SpikeEvent {
+  session_id : string
+  channel_id : u16
+  t_us       : u64
+  amplitude  : f32
+}
+
+record LFPTrace {
+  session_id : string
+  channel_id : u16
+  fs_hz      : f32
+  data_uri   : string
+  duration_us: u64
+  file_format: string  # 'binary','hdf5','mat','csv','parquet'
+}
+
+record BehaviorLabel {
+  session_id : string
+  t_start_us : u64
+  t_end_us   : u64
+  label      : string
+}
+
+record SafetyOutcome {
+  session_id      : string
+  delta_t_max     : f32
+  energy_session  : f32
+  ssi             : f32
+  efficacy_score  : f32
+  viability_pct   : f32
+  failure_mode    : string  # 'none','overheat','off_target','no_effect','excess_excitation'
+}
+
+record Provenance {
+  data_uri     : string
+  device_id    : string
+  firmware_ver : string
+  signed_by    : string
+  timestamp    : string
+}
+
+record DataConsent {
+  subject_id : string
+  consent_id : string
+  consented_at : string
+  purpose     : string
+  revoked     : bool
+}
+
+policy dataset.basic_sanity {
+  forall s in Stimulus:
+    assert s.duty_cycle >= 0.0 && s.duty_cycle <= 1.0;
+
+  forall e in SpikeEvent:
+    assert e.t_us >= 0;
+
+  forall l in BehaviorLabel:
+    assert l.t_end_us > l.t_start_us;
+}
+
+policy dataset.signal_integrity {
+  # LFP trace duration should be > 0 and not excessively long if sample_rate provided
+  forall t in LFPTrace:
+    assert t.duration_us > 0;
+    assert t.fs_hz > 0.0;
+    assert t.file_format == 'binary' || t.file_format == 'hdf5' || t.file_format == 'mat' || t.file_format == 'parquet' || t.file_format == 'csv';
+
+  # Spike event amplitudes must be within sensor-dependent limits (example: -500uV .. 500uV typical)
+  forall e in SpikeEvent:
+    assert e.amplitude > -500.0 && e.amplitude < 500.0;
+}
+
+policy dataset.privacy_and_provenance {
+  forall p in Provenance:
+    assert p.data_uri != '';
+    assert p.device_id != '';
+    assert p.signed_by != '';
+    assert p.timestamp != '';
+
+  forall c in DataConsent:
+    assert c.consent_id != '';
+    assert c.subject_id != '';
+}
+
+end dataset

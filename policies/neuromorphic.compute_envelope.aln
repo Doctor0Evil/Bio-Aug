@@ -1,0 +1,10 @@
+policy neuromorphic.compute_envelope {
+  traceability {
+    hazard_id       = 'HAZ-NEUROMORPHIC-001'
+    iso14971_clause = '7.4,7.5'
+    iec62304_class  = 'C'
+    rationale       = 'Bound neuromorphic throughput and latency for hybrid AI–human control loops'
+    dpia            = true
+  }
+  condition { synops_rate_in_bounds && latency_below_deadline && power_within_budget }
+}

@@ -1,0 +1,10 @@
+policy city.neuro_privacy_guard {
+  traceability {
+    hazard_id       = 'HAZ-CITY-NEURO-PRIV-001'
+    iso14971_clause = '7.4,7.5,9.2'
+    iec62304_class  = 'C'
+    rationale       = 'Protect mental privacy and limit biosignal use in smart-city control'
+    dpia            = true
+  }
+  condition { explicit_consent && purpose_binding && differential_privacy_enabled && neuro_rights_respected }
+}

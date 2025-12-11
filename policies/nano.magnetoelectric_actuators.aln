@@ -1,0 +1,10 @@
+policy nano.magnetoelectric_actuators {
+  traceability {
+    hazard_id       = 'HAZ-NANO-ME-001'
+    iso14971_clause = '7.4,7.5'
+    iec62304_class  = 'C'
+    rationale       = 'Match magnetoelectric resonance to drive fields while bounding induced fields'
+    dpia            = true
+  }
+  condition { fr_aligned && e_field_below_tissue_limit && no_mri_conflict }
+}

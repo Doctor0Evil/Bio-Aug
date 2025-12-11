@@ -1,0 +1,22 @@
+policy pillar4.neuro_smart_city_governance {
+  traceability {
+    hazard_id       = 'HAZ-CITY-NEURO-GOV-001'
+    iso14971_clause = '7.4,7.5,9.2'
+    iec62304_class  = 'C'
+    rationale       = 'Neuro-aware smart-city control loops must be human-centric, inclusive, and aligned with neuro-rights governance'
+    dpia            = true
+  }
+  # Hybrid intelligence, co-produced knowledge, SDG alignment, and governance of biosignal use. [web:8]
+  binding {
+    no_std = false
+    guard = "src/embedded/pillar4_hybrid_reliability_guard_v2.rs::guard_hybrid_reliability"
+    guard_version = "v2"
+  }
+
+  condition {
+    human_centric_design_verified &&
+    inclusiveness_metrics_ok &&
+    biosignal_governance_ok &&
+    hybrid_intelligence_architecture_reviewed
+  }
+}

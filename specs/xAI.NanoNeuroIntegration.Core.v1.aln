@@ -1,0 +1,67 @@
+aln dataset xAI.NanoNeuroIntegration.Core.v1
+
+record NeuromodEnvelope {
+  id                : string
+  modality          : string   # 'NIR','magnetic','ultrasound','electrical','chemical'
+  min_freq_hz       : f32
+  max_freq_hz       : f32
+  max_intensity     : f32      # mW/mm^2 or mT, modality-specific
+  max_pulse_width_ms: f32
+  max_duty_cycle    : f32
+  max_session_energy: f32
+  max_delta_T_c     : f32      # max allowed temperature rise
+}
+
+record Stimulus {
+  id                : string
+  envelope_id       : string
+  modality          : string
+  freq_hz           : f32
+  intensity         : f32
+  pulse_width_ms    : f32
+  duty_cycle        : f32
+  pulses            : u32
+}
+
+record NeuromodSession {
+  id                : string
+  subject_id        : string
+  protocol_id       : string
+  envelope_id       : string
+  start_time        : string
+  end_time          : string
+  cumulative_energy : f32
+  max_delta_T_c     : f32
+  failure_mode      : string   # 'none','overheat','off_target','no_effect','excess_excitation'
+}
+
+record SafetyMetrics {
+  session_id        : string
+  delta_T_max       : f32
+  energy_session    : f32
+  ssi               : f32      # spatial selectivity index
+  efficacy_score    : f32      # e.g., reduction in pathological activity
+  viability_percent : f32
+}
+
+policy neuromod.envelope_compliance {
+  forall s in Stimulus, e in NeuromodEnvelope where s.envelope_id == e.id:
+    assert s.freq_hz      >= e.min_freq_hz && s.freq_hz      <= e.max_freq_hz;
+    assert s.intensity    <= e.max_intensity;
+    assert s.pulse_width_ms <= e.max_pulse_width_ms;
+    assert s.duty_cycle   >= 0.0 && s.duty_cycle <= e.max_duty_cycle;
+}
+
+policy neuromod.session_safety_bounds {
+  forall sess in NeuromodSession, env in NeuromodEnvelope where sess.envelope_id == env.id:
+    assert sess.cumulative_energy <= env.max_session_energy;
+    assert sess.max_delta_T_c     <= env.max_delta_T_c;
+}
+
+policy neuromod.safety_metrics_requirements {
+  forall m in SafetyMetrics:
+    assert m.delta_T_max >= 0.0;
+    assert m.viability_percent >= 0.0 && m.viability_percent <= 100.0;
+}
+
+end dataset

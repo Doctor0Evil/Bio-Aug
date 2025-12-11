@@ -1,0 +1,10 @@
+policy nano.tis2pt_bci {
+  traceability {
+    hazard_id       = 'HAZ-NANO-TIS2PT-001'
+    iso14971_clause = '7.4,7.5,9.2'
+    iec62304_class  = 'C'
+    rationale       = 'Control nongenetic TiS2/Pt nanotransducer BCIs with dual actuator + biochemical roles'
+    dpia            = true
+  }
+  condition { nir_pulse_in_bounds && firing_rate_in_bounds && oxidative_stress_markers_ok }
+}

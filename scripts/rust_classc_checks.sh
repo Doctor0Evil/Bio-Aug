@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT=${1:-src/embedded}
-OUT_JSON=${2:-build/out/rust_classc_checks.json}
+ROOT="bioaug-clinical/src/embedded"
+OUT_JSON="bioaug-clinical/build/out/rust_classc_checks.json"
 mkdir -p $(dirname "$OUT_JSON")
 
 issues=0

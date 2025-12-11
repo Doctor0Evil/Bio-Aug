@@ -1,0 +1,10 @@
+policy city.neurofeedback_loop {
+  traceability {
+    hazard_id       = 'HAZ-CITY-FEEDBACK-001'
+    iso14971_clause = '7.4,7.5'
+    iec62304_class  = 'C'
+    rationale       = 'Stabilize urban control loops driven by biosignals and BCIs'
+    dpia            = true
+  }
+  condition { controller_stable && gain_within_bounds && human_override_available }
+}

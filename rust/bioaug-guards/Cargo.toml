@@ -1,0 +1,12 @@
+[package]
+name = "bioaug-guards"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+proptest = "1.0"
+nanomod-env-guard = { path = "../nanomod-env-guard" }
+neuronano-guards = { path = "../neuronano-guards" }
+
+[lib]
+path = "src/lib.rs"

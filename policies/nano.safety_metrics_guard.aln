@@ -1,0 +1,25 @@
+policy nano.safety_metrics_guard {
+  traceability {
+    hazard_id       = 'HAZ-NANO-METRICS-001'
+    iso14971_clause = '7.4,7.5,9.2'
+    iec62304_class  = 'C'
+    rationale       = 'Enforce nanotransducer safety metrics (ΔT, energy, SSI, efficacy, biocompatibility)'
+    dpia            = true
+  }
+
+  # Encodes core metrics from wireless nanotransducer and smart-nanomaterial neuromodulation literature. [web:10][web:15]
+  binding {
+    guard = "src/safety/nanomod_env_guard.rs::check_stim"
+    guard_version = "v1"
+    no_std = true
+  }
+
+  condition {
+    delta_T_max <= delta_T_threshold &&
+    energy_session <= energy_safety_bound &&
+    ssi >= ssi_min &&
+    efficacy_score >= efficacy_min &&
+    viability_percent >= viability_min &&
+    viability_percent <= 100.0
+  }
+}

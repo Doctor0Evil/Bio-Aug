@@ -1,13 +1,10 @@
-aln system BioAugPolicies {
-  policy governance_region_switch {
-    dpia: true;
-    traceability {
-      hazard_id: "HAZ-GOV-001";
-      iso14971_clause: "7.4,7.5";
-      iec62304_class: "C";
-      rationale: "Prevent misaligned cross-border data flows in neuromorphic/BCI and smart-city infra";
-    }
-    tags: ["governance","cross_border"];
-    rule enforce: require region_profile_match && I >= 0.9999;
-  } end policy
-} end system
+policy governance.region_switch {
+  traceability {
+    hazard_id       = 'HAZ-GOV-001'
+    iso14971_clause = '7.4,7.5'
+    iec62304_class  = 'C'
+    rationale       = 'Ensure region-appropriate consent, logging, encryption, and residency'
+    dpia            = true
+  }
+  condition { region_profile_match && link_integrity_ge_0_9999 }
+}

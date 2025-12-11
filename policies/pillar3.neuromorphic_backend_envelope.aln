@@ -1,0 +1,22 @@
+policy pillar3.neuromorphic_backend_envelope {
+  traceability {
+    hazard_id       = 'HAZ-NEUROMORPHIC-002'
+    iso14971_clause = '7.4,7.5'
+    iec62304_class  = 'C'
+    rationale       = 'Neuromorphic backends must meet throughput, latency, and power constraints for safe hybrid AI–human loops'
+    dpia            = true
+  }
+  # Brain-like compute envelope and neuromorphic security surfaces. [web:12]
+  binding {
+    guard = "src/embedded/pillar3_neuromorphic_envelope_guard_v1.rs::guard_neuromorphic_backend"
+    guard_version = "v1"
+    no_std = true
+  }
+
+  condition {
+    synops_rate_in_bounds &&
+    latency_under_deadline &&
+    power_within_brainlike_budget &&
+    neuromorphic_security_controls_enabled
+  }
+}

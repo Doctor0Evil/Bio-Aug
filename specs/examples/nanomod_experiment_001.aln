@@ -1,0 +1,47 @@
+aln dataset nanomod.experiment_001
+
+instance env1 : NeuromodEnvelope = {
+  id = "env1"
+  modality = "magnetoelectric"
+  min_freq_hz = 10.0
+  max_freq_hz = 150.0
+  max_intensity = 10.0
+  max_pulse_width_ms = 100.0
+  max_duty_cycle = 0.5
+  max_session_energy = 100000.0
+  max_delta_T_c = 1.0
+}
+
+instance stim1 : Stimulus = {
+  id = "stim1"
+  envelope_id = "env1"
+  modality = "magnetoelectric"
+  freq_hz = 120.0
+  intensity = 8.0
+  pulse_width_ms = 5.0
+  duty_cycle = 0.1
+  pulses = 10
+}
+
+instance session1 : NeuromodSession = {
+  id = "session1"
+  subject_id = "subj001"
+  protocol_id = "protA"
+  envelope_id = "env1"
+  start_time = "2025-12-01T10:00:00Z"
+  end_time = "2025-12-01T10:05:00Z"
+  cumulative_energy = 400.0
+  max_delta_T_c = 0.5
+  failure_mode = "none"
+}
+
+instance metrics1 : SafetyMetrics = {
+  session_id = "session1"
+  delta_T_max = 0.3
+  energy_session = 400.0
+  ssi = 0.85
+  efficacy_score = 0.65
+  viability_percent = 98.0
+}
+
+end dataset

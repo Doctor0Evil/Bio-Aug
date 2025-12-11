@@ -1,0 +1,10 @@
+policy nano.wireless_envelope {
+  traceability {
+    hazard_id       = 'HAZ-NANO-STIM-001'
+    iso14971_clause = '7.4,7.5'
+    iec62304_class  = 'C'
+    rationale       = 'Bound wireless nanoneuromodulation within validated energy and temperature envelopes'
+    dpia            = true
+  }
+  condition { envelope_valid && cumulative_energy_below_limit }
+}
