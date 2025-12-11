@@ -1,0 +1,268 @@
+module AugTechNeuroCityVolumeDeviceGrid_v1_0_0 {
+
+    // ------------------------------------------------------------------
+    // 1. Immutable registry constants (non-secret, attestation-friendly)
+    // ------------------------------------------------------------------
+    constants {
+        REGISTRY_ID                    : "ffffffff-ffff-4fff-8fff-fffffffffff1";
+        REGISTRY_LABEL                 : "AugTech-NeuroCity-Volume-Device-Grid";
+        REGISTRY_COMPLIANCE_TAG        : "GMP-CLASS-A-URBAN-NEURO";
+        REGISTRY_VERSION               : "1.0.0";
+        REGISTRY_MIN_QPU_TOPS          : 1000.000;
+        REGISTRY_LATENCY_BUDGET_MS     : 50.000;
+        REGISTRY_HEX_FINGERPRINT_256   : "B4E2D7A1C9F0837AD1E4B6C3F9A2D5E1B7C8D9F0A3E6B1C4D7F2A9E0C5B8D3F6";
+    }
+
+    // ------------------------------------------------------------------
+    // 2. Biocompatibility + safety matrices (complex arrays, read-only)
+    // ------------------------------------------------------------------
+    biocompatibility_matrix NeuroCityBioSafetyEnvelope {
+        // Per-zone safety scores, 0.0–1.0 (rows: zones, cols: factors)
+        neural_interface_safety[][] : [
+            [0.98,0.97,0.96,0.95],
+            [0.97,0.96,0.95,0.94],
+            [0.99,0.98,0.97,0.96],
+            [0.96,0.95,0.94,0.93]
+        ];
+        cognitive_overload_risk[][] : [
+            [0.05,0.06,0.07,0.08],
+            [0.06,0.07,0.08,0.09],
+            [0.04,0.05,0.06,0.07],
+            [0.07,0.08,0.09,0.10]
+        ];
+        tissue_heating_margin_c[][] : [
+            [2.50,2.40,2.30,2.20],
+            [2.40,2.30,2.20,2.10],
+            [2.60,2.50,2.40,2.30],
+            [2.30,2.20,2.10,2.00]
+        ];
+        privacy_leakage_risk[][] : [
+            [0.03,0.04,0.05,0.06],
+            [0.04,0.05,0.06,0.07],
+            [0.02,0.03,0.04,0.05],
+            [0.05,0.06,0.07,0.08]
+        ];
+    }
+
+    // ------------------------------------------------------------------
+    // 3. Hex datasets for public attestation (non-secret, non-key)
+    // ------------------------------------------------------------------
+    hex_dataset DeviceGridFingerprints {
+        // Cryptographically random-looking, but not used as keys.
+        device_profile_grid_1_256 : "A3E6B1C4D7F2A9E0C5B8D3F6B4E2D7A1C9F0837AD1E4B6C3F9A2D5E1B7C8D9F0";
+        device_profile_grid_2_256 : "9F1C0A7D2B6E53C8D4F8A1E2B7C9D0F3A5E6B1C4D7F2A9E0C5B8D3F6B4E2D7A1";
+        policy_grid_1_128         : "3F9A2D5E1B7C8D9F0A3E6B1C4D7F2A9";
+        binding_grid_1_128        : "1E4B6C3F9A2D5E1B7C8D9F0A3E6B1C4";
+        binding_grid_2_128        : "D7F2A9E0C5B8D3F6B4E2D7A1C9F0837";
+        binding_grid_3_128        : "A9E0C5B8D3F6B4E2D7A1C9F0837AD1E";
+    }
+
+    // ------------------------------------------------------------------
+    // 4. Aug-tech device profiles (aligned with SQL device_profile)
+    // ------------------------------------------------------------------
+    entity AugTechDeviceProfile {
+        id                      : uuid;
+        logical_name            : string;
+        class                   : enum["BCI","EEG","NEUROMORPHIC","BIOMECH"];
+        description             : string;
+        min_ops_tops            : float;
+        max_ops_tops            : float;
+        freq_low_hz             : float;
+        freq_high_hz            : float;
+        // high-fidelity scanner bands (multi-range per device)
+        sub_band_edges_hz[]     : list<float>;
+        // intensity factors per band (0–1 scaling)
+        intensity_weights[]     : list<float>;
+        // public fingerprint for attestation, not authentication
+        hex_fingerprint_256     : string;
+    }
+
+    const DEVICE_PROFILES[] : list<AugTechDeviceProfile> = [
+        {
+            id                  : "ffffffff-ffff-4fff-8fff-fffffffffff1",
+            logical_name        : "bci_motor_imagery_v1",
+            class               : "BCI",
+            description         : "Motor-imagery BCI stack (EEG 4–40 Hz) for MI/ERP tasks, µV-scale.",
+            min_ops_tops        : 10.000,
+            max_ops_tops        : 150.000,
+            freq_low_hz         : 4.000,
+            freq_high_hz        : 40.000,
+            sub_band_edges_hz   : [4.0,8.0,13.0,30.0,40.0],
+            intensity_weights   : [0.15,0.30,0.30,0.20,0.05],
+            hex_fingerprint_256 : DeviceGridFingerprints.device_profile_grid_1_256
+        },
+        {
+            id                  : "ffffffff-ffff-4fff-8fff-fffffffffff2",
+            logical_name        : "eeg_clinical_32ch_v1",
+            class               : "EEG",
+            description         : "Clinical 32-channel EEG (0.5–100 Hz) for monitoring and diagnostics.",
+            min_ops_tops        : 5.000,
+            max_ops_tops        : 80.000,
+            freq_low_hz         : 0.500,
+            freq_high_hz        : 100.000,
+            sub_band_edges_hz   : [0.5,4.0,8.0,13.0,30.0,45.0,70.0,100.0],
+            intensity_weights   : [0.10,0.15,0.20,0.20,0.15,0.10,0.10],
+            hex_fingerprint_256 : DeviceGridFingerprints.device_profile_grid_2_256
+        },
+        {
+            id                  : "ffffffff-ffff-4fff-8fff-fffffffffff3",
+            logical_name        : "neuromorphic_spike_array_v1",
+            class               : "NEUROMORPHIC",
+            description         : "Event-based spike array (200–20 000 Hz core spike envelope).",
+            min_ops_tops        : 1000.000,
+            max_ops_tops        : 20000.000,
+            freq_low_hz         : 200.000,
+            freq_high_hz        : 20000.000,
+            sub_band_edges_hz   : [200.0,500.0,1000.0,5000.0,10000.0,20000.0],
+            intensity_weights   : [0.05,0.15,0.25,0.25,0.20,0.10],
+            hex_fingerprint_256 : "A3E6B1C4D7F2A9E0C5B8D3F6B4E2D7A1C9F0837AD1E4B6C3F9A2D5E1B7C8D9F0"
+        },
+        {
+            id                  : "ffffffff-ffff-4fff-8fff-fffffffffff4",
+            logical_name        : "biomech_infusion_exo_v1",
+            class               : "BIOMECH",
+            description         : "Biomechanical infusion/exoskeleton controller (0–10 Hz actuation).",
+            min_ops_tops        : 2.000,
+            max_ops_tops        : 50.000,
+            freq_low_hz         : 0.000,
+            freq_high_hz        : 10.000,
+            sub_band_edges_hz   : [0.0,0.5,1.0,2.0,5.0,10.0],
+            intensity_weights   : [0.10,0.15,0.20,0.20,0.20],
+            hex_fingerprint_256 : "C5B8D3F6B4E2D7A1C9F0837AD1E4B6C3F9A2D5E1B7C8D9F0A3E6B1C4D7F2A9E0"
+        }
+    ];
+
+    // ------------------------------------------------------------------
+    // 5. Volume policies as immutable descriptors (no secrets, no keys)
+    // ------------------------------------------------------------------
+    entity AugTechVolumePolicy {
+        id                          : uuid;
+        name                        : string;
+        device_profile              : string;   // FK into DEVICE_PROFILES.logical_name
+        max_allowed_ml              : float;
+        qpu_cycle_budget_ns         : int64;
+        compliance_tag              : string;
+        hex_policy_fingerprint_128  : string;
+        quantisation_factors[]      : list<float>;
+    }
+
+    const VOLUME_POLICIES[] : list<AugTechVolumePolicy> = [
+        {
+            id                         : "dddddddd-dddd-4ddd-8ddd-ddddddddddd4",
+            name                       : "neuro_nanoswarm_infusion_v1",
+            device_profile             : "biomech_infusion_exo_v1",
+            max_allowed_ml             : 1000.000,
+            qpu_cycle_budget_ns        : 250,
+            compliance_tag             : "GMP-CLASS-A",
+            hex_policy_fingerprint_128 : DeviceGridFingerprints.policy_grid_1_128,
+            quantisation_factors       : [0.2,0.4,0.6,0.8,1.0]
+        }
+    ];
+
+    // ------------------------------------------------------------------
+    // 6. High-fidelity binding grid (virtual BCI/EEG/neuromorphic bands)
+    // ------------------------------------------------------------------
+    entity AugTechBindingProfile {
+        id                      : uuid;
+        device_profile          : string;
+        // Exact frequency band
+        freq_band_low_hz        : float;
+        freq_band_high_hz       : float;
+        // Relative priority (0–1) for scheduling / QoS
+        qos_priority            : float;
+        // Non-secret binding fingerprint
+        hex_binding_128         : string;
+        // Multi-dimensional safety vector for this band
+        safety_vector[]         : list<float>;      // [bio, thermal, overload, privacy]
+    }
+
+    const BINDING_PROFILES[] : list<AugTechBindingProfile> = [
+        {
+            id               : "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1",
+            device_profile   : "eeg_clinical_32ch_v1",
+            freq_band_low_hz : 0.5,
+            freq_band_high_hz: 40.0,
+            qos_priority     : 0.90,
+            hex_binding_128  : DeviceGridFingerprints.binding_grid_1_128,
+            safety_vector    : [0.96, 2.40, 0.06, 0.04]
+        },
+        {
+            id               : "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa2",
+            device_profile   : "bci_motor_imagery_v1",
+            freq_band_low_hz : 8.0,
+            freq_band_high_hz: 30.0,
+            qos_priority     : 0.95,
+            hex_binding_128  : DeviceGridFingerprints.binding_grid_2_128,
+            safety_vector    : [0.98, 2.50, 0.05, 0.03]
+        },
+        {
+            id               : "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa3",
+            device_profile   : "neuromorphic_spike_array_v1",
+            freq_band_low_hz : 500.0,
+            freq_band_high_hz: 5000.0,
+            qos_priority     : 0.92,
+            hex_binding_128  : DeviceGridFingerprints.binding_grid_3_128,
+            safety_vector    : [0.97, 2.30, 0.07, 0.04]
+        }
+    ];
+
+    // ------------------------------------------------------------------
+    // 7. Behavior tree for safe mapping (no control, only constraints)
+    // ------------------------------------------------------------------
+    behavior_tree NeuroCityGuardedMapping {
+        root "volume_device_mapping" {
+
+            branch "by_device_class" {
+                node "bci"          -> filter(AugTechDeviceProfile.class == "BCI");
+                node "eeg"          -> filter(AugTechDeviceProfile.class == "EEG");
+                node "neuromorphic" -> filter(AugTechDeviceProfile.class == "NEUROMORPHIC");
+                node "biomech"      -> filter(AugTechDeviceProfile.class == "BIOMECH");
+            }
+
+            branch "by_frequency_band" {
+                node "low_band"     -> filter(AugTechDeviceProfile.freq_high_hz <= 40.0);
+                node "mid_band"     -> filter(AugTechDeviceProfile.freq_low_hz >= 4.0
+                                               and AugTechDeviceProfile.freq_high_hz <= 5000.0);
+                node "high_band"    -> filter(AugTechDeviceProfile.freq_low_hz >= 500.0);
+            }
+
+            branch "by_policy" {
+                node "volume_ceilings" -> filter(AugTechVolumePolicy.max_allowed_ml <= 1000.0);
+            }
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // 8. Service surface (purely declarative, no secrets or actions)
+    // ------------------------------------------------------------------
+    service AugTechNeuroCityDescriptorService {
+
+        // Fully declarative: returns descriptors only.
+        op list_device_profiles() -> list<AugTechDeviceProfile> {
+            // Implementation: serialization from DEVICE_PROFILES; no secrets, no live I/O.
+        }
+
+        op list_volume_policies() -> list<AugTechVolumePolicy> {
+            // Implementation: serialization from VOLUME_POLICIES.
+        }
+
+        op list_binding_profiles() -> list<AugTechBindingProfile> {
+            // Implementation: serialization from BINDING_PROFILES.
+        }
+
+        op resolve_volume_policy_for_device(
+            device_profile : string
+        ) -> optional AugTechVolumePolicy {
+            // Implementation: lookup in VOLUME_POLICIES where device_profile matches.
+        }
+
+        op recommend_binding_for_band(
+            device_profile  : string,
+            freq_low_hz     : float,
+            freq_high_hz    : float
+        ) -> optional AugTechBindingProfile {
+            // Implementation: select binding whose band covers [freq_low_hz, freq_high_hz]
+            // and with highest qos_priority, without performing any side effects.
+        }
+    }
+}
