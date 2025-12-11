@@ -1,0 +1,45 @@
+# file: qpu/datashards/biofreq-bci-workflow.aln
+# format: CSV, mermaid/markdown compatible via ALN Dev-Tunneling
+
+node_id,node_type,stage,depends_on,lang,path,entrypoint,description
+root-000,PIPELINE,root,,ALN,./aln/pipelines/biofreq-bci-daily.aln,biofreq_bci_daily,"Daily Rust+ALN workflow for biomechanical, BCI/EEG/MCI, neuromorphic+organic systems"
+src-010,INGEST,signals,root-000,ALN,./aln/design/biosignal_invariants.aln,update_from_datasets,"Normalize EEG/MI/EMG/biomech/biofield data into sanitized biosignal invariants"
+src-011,INGEST,neuromorphic,root-000,ALN,./aln/design/neuromorphic_invariants.aln,update_from_hw_specs,"Capture neuromorphic+organic node constraints (energy, thermal, link) without vendor names"
+src-012,INGEST,compliance,root-000,ALN,./aln/policy/neural_data_policies.aln,refresh_from_law,"Refresh neural-data and device-compliance rules (multi-jurisdiction) in abstract form"
+
+tr-020,TRANSFORM,aln_to_guard_spec,"src-010|src-011|src-012",ALN,./aln/transform/guard_specs.aln,compute_guard_spec,"Fuse signal, device, and compliance invariants into guard specifications consumable by codegen"
+tr-021,TRANSFORM,aln_to_metrics_schema,"src-010|src-011",ALN,./aln/metrics/prom_schema.aln,compute_schema,"Derive Prometheus metric families for build, safety, model, and neuromorphic-node health"
+
+cg-030,CODEGEN,rust_core,tr-020,RUST,./rust/crates/biofreq-core/src/lib.rs,codegen_core,"Generate core Rust types, traits, and biosignal abstractions enforcing ALN invariants"
+cg-031,CODEGEN,rust_bci,tr-020,RUST,./rust/crates/biofreq-bci/src/lib.rs,codegen_bci,"Generate Rust BCI/EEG/MCI guards (preproc, features, decoders) from ALN guard specs"
+cg-032,CODEGEN,rust_biomech,tr-020,RUST,./rust/crates/biofreq-biomech/src/lib.rs,codegen_biomech,"Generate biomechanical safety envelopes and controllers from ALN constraints"
+cg-033,CODEGEN,rust_neuronode,tr-020,RUST,./rust/crates/biofreq-neuronode/src/lib.rs,codegen_neuronode,"Generate neuromorphic/organic-node routing and safety wrappers using event-driven models"
+
+cg-034,CODEGEN,rust_metrics,tr-021,RUST,./rust/crates/biofreq-metrics/src/lib.rs,codegen_metrics,"Generate Prometheus exporters and metric registration from ALN metric schema"
+cg-035,CODEGEN,rust_compliance,src-012,RUST,./rust/crates/biofreq-compliance/src/lib.rs,codegen_compliance,"Generate compliance guard APIs (sanitized, jurisdiction-agnostic) for pipelines and endpoints"
+
+ts-040,TEST,unit_core,cg-030,RUST,./rust/crates/biofreq-core/tests/unit_core.rs,run,"Unit tests for core biosignal and time-series abstractions"
+ts-041,TEST,unit_bci,cg-031,RUST,./rust/crates/biofreq-bci/tests/unit_bci.rs,run,"Unit tests for MI, code-modulated, and closed-loop BCI guards using canned vectors"
+ts-042,TEST,unit_biomech,cg-032,RUST,./rust/crates/biofreq-biomech/tests/unit_biomech.rs,run,"Unit tests for torque, velocity, and position safety bounds in biomechanical controllers"
+ts-043,TEST,unit_neuronode,cg-033,RUST,./rust/crates/biofreq-neuronode/tests/unit_neuronode.rs,run,"Unit tests for neuromorphic event routing, backpressure, and fail-safe modes"
+ts-044,TEST,property_invariants,"cg-030|cg-031|cg-032|cg-033",RUST,./rust/tests/property_invariants.rs,run,"Property tests derived from ALN invariants (no overflow, bounded latency, safe fallbacks)"
+ts-045,TEST,compliance_sim,"cg-035|ts-040|ts-041|ts-042|ts-043",RUST,./rust/tests/compliance_sim.rs,run,"Simulated compliance/risk scenarios, asserting ALN policy enforcement at guards"
+
+mx-050,METRICS,prom_export,"ts-040|ts-041|ts-042|ts-043|ts-045",RUST,./rust/bin/metrics_exporter.rs,serve_http,"Expose Prometheus metrics for CI and staging clusters"
+mx-051,METRICS,ci_scrape,mx-050,ALN,./aln/ci/prom_scrape_cfg.aln,configure,"Configure CI environments to scrape metrics and fail on degraded safety/perf thresholds"
+
+pkg-060,PACKAGING,crate_core,"cg-030|ts-040",RUST,./rust/crates/biofreq-core/Cargo.toml,publish,"GitHub-ready crate for biosignal abstractions"
+pkg-061,PACKAGING,crate_bci,"cg-031|ts-041",RUST,./rust/crates/biofreq-bci/Cargo.toml,publish,"GitHub-ready crate for BCI/EEG/MCI processing with guards"
+pkg-062,PACKAGING,crate_biomech,"cg-032|ts-042",RUST,./rust/crates/biofreq-biomech/Cargo.toml,publish,"GitHub-ready crate for biomechanical safety and control logic"
+pkg-063,PACKAGING,crate_neuronode,"cg-033|ts-043",RUST,./rust/crates/biofreq-neuronode/Cargo.toml,publish,"GitHub-ready crate for neuromorphic/organic-node integration"
+pkg-064,PACKAGING,crate_metrics,"cg-034|mx-050",RUST,./rust/crates/biofreq-metrics/Cargo.toml,publish,"GitHub-ready crate for metrics exporters and CI observability"
+pkg-065,PACKAGING,crate_compliance,"cg-035|ts-045",RUST,./rust/crates/biofreq-compliance/Cargo.toml,publish,"GitHub-ready crate for compliance-aware guard APIs"
+
+mf-070,MANIFEST,research_root,"src-010|src-011|src-012",ALN,./aln/research/biofreq_manifest_root.aln,write,"Top-level research manifest (datasets, models, safety/energy envelopes, jurisdictions)"
+mf-071,MANIFEST,research_bci,"cg-031|ts-041",ALN,./aln/research/biofreq_manifest_bci.aln,write,"BCI-focused manifest (MI tasks, code-modulated paradigms, decoding metrics)"
+mf-072,MANIFEST,research_biomech,"cg-032|ts-042",ALN,./aln/research/biofreq_manifest_biomech.aln,write,"Biomechanical manifest (device classes, load cases, smart-city exoskeleton scenarios)"
+mf-073,MANIFEST,research_neuronode,"cg-033|ts-043",ALN,./aln/research/biofreq_manifest_neuronode.aln,write,"Neuromorphic/organic-node manifest (event models, energy profiles, routing policies)"
+mf-074,MANIFEST,research_ci,"mx-050|mx-051",ALN,./aln/research/biofreq_manifest_ci.aln,write,"CI+observability manifest (coverage, performance, safety KPIs, daily drift summaries)"
+
+ci-080,CI_PIPELINE,github_actions,"pkg-060|pkg-061|pkg-062|pkg-063|pkg-064|pkg-065|mf-070|mf-071|mf-072|mf-073|mf-074",YAML,./.github/workflows/biofreq-bci-daily.yml,run,"Daily CI job wiring all stages, with matrix builds and guarded publishing"
+ci-081,CI_PIPELINE,gitlab_ci,ci-080,YAML,./.gitlab-ci.yml,include_workflow,"Optional GitLab CI mirroring for multi-cloud research clusters"
