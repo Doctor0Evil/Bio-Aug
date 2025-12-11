@@ -1,0 +1,233 @@
+module MinimalBodyTrackBiosenseCalibration_v1_0_0 {
+
+    // ----------------------------------------------------------
+    // 1. Global calibration and traceability constants
+    // ----------------------------------------------------------
+    constants {
+        REGISTRY_ID                     : "ffffffff-ffff-4fff-8fff-ffffffffbb01";
+        REGISTRY_LABEL                  : "Minimal-BodyTrack-Biosense-Calibration-Grid";
+        REGISTRY_VERSION                : "1.0.0";
+        REGISTRY_COMPLIANCE_TAG         : "ISO13485-CAL-READY";
+        MAX_ALLOWED_CAL_DRIFT_MM        : 2.0;      // motion systems target sub‑cm error[web:55][web:57]
+        MAX_ALLOWED_CAL_DRIFT_PCT       : 5.0;      // biosensor gain/offset drift per interval[web:60][web:61]
+        MAX_CAL_INTERVAL_DAYS           : 365;      // upper bound for non‑critical devices[web:61][web:64]
+    }
+
+    // ----------------------------------------------------------
+    // 2. Device families for body tracking and biosensing
+    // ----------------------------------------------------------
+    entity DeviceFamilyProfile {
+        id                      : uuid;
+        family_code             : string;   // e.g. "MOCAP_OPTICAL", "IMU_BODY", "ECG_12LEAD"
+        class                   : enum["BODY_TRACKING","BIOSENSING","IMAGING","HYBRID"];
+        modality_tags[]         : list<string>; // e.g. ["optical","infrared"], ["ECG","SpO2"]
+        description             : string;
+        requires_3d_reference   : bool;
+        requires_physical_phantom : bool;
+        iso13485_relevant       : bool;
+    }
+
+    const DEVICE_FAMILIES[] : list<DeviceFamilyProfile> = [
+        {
+            id                      : "11111111-1111-4111-8111-111111111111",
+            family_code             : "MOCAP_OPTICAL",
+            class                   : "BODY_TRACKING",
+            modality_tags           : ["optical","marker_based"],
+            description             : "Optical motion capture camera arrays for gait and biomechanics labs.",
+            requires_3d_reference   : true,
+            requires_physical_phantom : true,
+            iso13485_relevant       : true
+        },
+        {
+            id                      : "22222222-2222-4222-8222-222222222222",
+            family_code             : "IMU_BODY",
+            class                   : "BODY_TRACKING",
+            modality_tags           : ["imu","wearable"],
+            description             : "Body‑worn IMUs for sensor‑to‑segment tracking and anatomical calibration.",
+            requires_3d_reference   : false,
+            requires_physical_phantom : false,
+            iso13485_relevant       : true
+        },
+        {
+            id                      : "33333333-3333-4333-8333-333333333333",
+            family_code             : "MULTIPLEX_BIOSENSE",
+            class                   : "BIOSENSING",
+            modality_tags           : ["electrochemical","optical","multi_analyte"],
+            description             : "Multiplexed biosensing platforms for multi‑analyte point‑of‑care testing.",
+            requires_3d_reference   : false,
+            requires_physical_phantom : false,
+            iso13485_relevant       : true
+        }
+    ];
+
+    // ----------------------------------------------------------
+    // 3. Body‑tracking calibration requirements (logistics)
+    // ----------------------------------------------------------
+    entity BodyTrackingCalibrationProfile {
+        id                          : uuid;
+        family_code                 : string; // FK into DEVICE_FAMILIES
+        description                 : string;
+        // Marker / sensor layout expectations (no vendor detail)
+        min_markers_or_sensors      : int64;
+        max_markers_or_sensors      : int64;
+        requires_full_body_sweep    : bool;
+        requires_quiet_stance       : bool;
+        // Accuracy targets
+        target_rms_error_mm         : float;
+        max_allowed_rms_error_mm    : float;
+        // Session logistics
+        min_calibration_duration_s  : float;
+        max_calibration_duration_s  : float;
+    }
+
+    const BODYTRACK_CAL_PROFILES[] : list<BodyTrackingCalibrationProfile> = [
+        {
+            id                          : "44444444-4444-4444-8444-444444444444",
+            family_code                 : "MOCAP_OPTICAL",
+            description                 : "Optical motion‑capture volume calibration with wand grid and static reference.",
+            min_markers_or_sensors      : 8,
+            max_markers_or_sensors      : 64,
+            requires_full_body_sweep    : true,
+            requires_quiet_stance       : true,
+            target_rms_error_mm         : 0.5,
+            max_allowed_rms_error_mm    : MAX_ALLOWED_CAL_DRIFT_MM,
+            min_calibration_duration_s  : 30.0,
+            max_calibration_duration_s  : 600.0
+        },
+        {
+            id                          : "55555555-5555-4555-8555-555555555555",
+            family_code                 : "IMU_BODY",
+            description                 : "Anatomical calibration using quiet stance and standard movement tests.",
+            min_markers_or_sensors      : 4,
+            max_markers_or_sensors      : 32,
+            requires_full_body_sweep    : false,
+            requires_quiet_stance       : true,
+            target_rms_error_mm         : 5.0,
+            max_allowed_rms_error_mm    : 10.0,
+            min_calibration_duration_s  : 60.0,
+            max_calibration_duration_s  : 900.0
+        }
+    ];
+
+    // ----------------------------------------------------------
+    // 4. Biosensing calibration requirements (multi‑analyte)
+    // ----------------------------------------------------------
+    entity BiosenseCalibrationProfile {
+        id                          : uuid;
+        family_code                 : string; // FK into DEVICE_FAMILIES
+        description                 : string;
+        // Multi‑analyte logistics
+        min_analytes                : int64;
+        max_analytes                : int64;
+        requires_reference_controls : bool;
+        requires_temp_compensation  : bool;
+        // Calibration metrics
+        target_bias_pct             : float;
+        max_allowed_bias_pct        : float;
+        target_cv_pct               : float;  // coefficient of variation
+        max_allowed_cv_pct          : float;
+        max_interval_days           : int64;
+    }
+
+    const BIOSENSE_CAL_PROFILES[] : list<BiosenseCalibrationProfile> = [
+        {
+            id                          : "66666666-6666-4666-8666-666666666666",
+            family_code                 : "MULTIPLEX_BIOSENSE",
+            description                 : "Multi‑analyte biosensing calibration using traceable controls and temperature‑compensated curves.",
+            min_analytes                : 2,
+            max_analytes                : 16,
+            requires_reference_controls : true,
+            requires_temp_compensation  : true,
+            target_bias_pct             : 3.0,
+            max_allowed_bias_pct        : MAX_ALLOWED_CAL_DRIFT_PCT,
+            target_cv_pct               : 5.0,
+            max_allowed_cv_pct          : 10.0,
+            max_interval_days           : MAX_CAL_INTERVAL_DAYS
+        }
+    ];
+
+    // ----------------------------------------------------------
+    // 5. Calibration logistics for hospital / lab routing
+    // ----------------------------------------------------------
+    entity CalibrationLogisticsProfile {
+        id                          : uuid;
+        facility_type               : enum["HOSPITAL","LAB","REHAB"];
+        description                 : string;
+        // Resource expectations (no scheduling logic)
+        min_staff_trained           : int64;
+        requires_dedicated_room     : bool;
+        requires_force_plate_or_phantom : bool;
+        // Data requirements (no PHI content)
+        requires_traceable_id       : bool;   // ties to calibration asset ID[web:61][web:64]
+        requires_audit_log          : bool;
+    }
+
+    const CAL_LOGISTICS_PROFILES[] : list<CalibrationLogisticsProfile> = [
+        {
+            id                          : "77777777-7777-4777-8777-777777777777",
+            facility_type               : "HOSPITAL",
+            description                 : "Hospital gait lab and scanner calibration logistics.",
+            min_staff_trained           : 2,
+            requires_dedicated_room     : true,
+            requires_force_plate_or_phantom : true,
+            requires_traceable_id       : true,
+            requires_audit_log          : true
+        },
+        {
+            id                          : "88888888-8888-4888-8888-888888888888",
+            facility_type               : "LAB",
+            description                 : "Research lab body‑tracking and biosensor calibration logistics.",
+            min_staff_trained           : 1,
+            requires_dedicated_room     : false,
+            requires_force_plate_or_phantom : false,
+            requires_traceable_id       : true,
+            requires_audit_log          : true
+        }
+    ];
+
+    // ----------------------------------------------------------
+    // 6. Minimal behavior tree (constraints only)
+    // ----------------------------------------------------------
+    behavior_tree CalibrationGuardTree {
+        root "calibration_guard_root" {
+
+            branch "body_tracking_accuracy_guard" {
+                node "optical_mocap_limit"
+                    -> filter(BodyTrackingCalibrationProfile.family_code == "MOCAP_OPTICAL"
+                              and BodyTrackingCalibrationProfile.max_allowed_rms_error_mm
+                                  <= MAX_ALLOWED_CAL_DRIFT_MM);
+            }
+
+            branch "biosense_bias_guard" {
+                node "multi_analyte_bias_limit"
+                    -> filter(BiosenseCalibrationProfile.max_allowed_bias_pct
+                              <= MAX_ALLOWED_CAL_DRIFT_PCT);
+            }
+
+            branch "iso_traceability_guard" {
+                node "require_traceable_id_and_audit"
+                    -> filter(CalibrationLogisticsProfile.requires_traceable_id == true
+                              and CalibrationLogisticsProfile.requires_audit_log == true);
+            }
+        }
+    }
+
+    // ----------------------------------------------------------
+    // 7. Descriptor-only service surface
+    // ----------------------------------------------------------
+    service CalibrationDescriptorService {
+
+        op list_device_families() -> list<DeviceFamilyProfile> {
+            // Returns DEVICE_FAMILIES; caller maps to concrete devices.
+        }
+
+        op list_bodytrack_profiles() -> list<BodyTrackingCalibrationProfile> {
+        }
+
+        op list_biosense_profiles() -> list<BiosenseCalibrationProfile> {
+        }
+
+        op list_logistics_profiles() -> list<CalibrationLogisticsProfile> {
+        }
+    }
+}
