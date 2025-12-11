@@ -1,0 +1,16 @@
+[package]
+name = "anti_riot_runtime"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+description = "Non-coercive, equity-by-design runtime primitives for AI/augmentation and nanoswarm therapies."
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+anyhow = "1.0"
+sha2 = "0.10"
+ed25519-dalek = { version = "2", features = ["pkcs8"] }
+hex = "0.4"
+chrono = { version = "0.4", features = ["serde"] }
+bitflags = "2"

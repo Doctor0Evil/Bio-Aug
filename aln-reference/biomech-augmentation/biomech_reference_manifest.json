@@ -1,0 +1,31 @@
+{
+  "version": "1.0.0",
+  "domain": "biomechanical-augmentation",
+  "profiles": [
+    {
+      "id": "AU.BioAug.BiomechCore.v1",
+      "description": "Core ALN safety profile for limb and sensor fusion biomechanical augmentations.",
+      "intended_use": [
+        "pre-clinical protocol design",
+        "bench and hardware-in-the-loop testing",
+        "safety case documentation"
+      ]
+    },
+    {
+      "id": "AU.BioAug.BiomechICU.v1",
+      "description": "ICU overlay profile for patients with active biomechanical augmentations.",
+      "intended_use": [
+        "ICU workflow design",
+        "augmentation–ICU interface analysis"
+      ]
+    },
+    {
+      "id": "AU.BioAug.BiomechGuards.v1",
+      "description": "Guard binding profile mapping ALN invariants to Rust guard functions.",
+      "intended_use": [
+        "runtime guard implementation",
+        "formal verification alignment"
+      ]
+    }
+  ]
+}

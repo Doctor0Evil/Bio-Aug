@@ -41,6 +41,7 @@ decl       = _{
 
 // ---------- DECLARATIONS ----------
 
+<<<<<<< HEAD
 system_decl  = { "aln" ~ "system" ~ ident ~ block }
 spec_decl    = { "aln" ~ "spec"   ~ ident ~ block }
 module_decl  = { "module" ~ ident ~ block }
@@ -48,6 +49,13 @@ policy_decl  = { "policy" ~ ident ~ block }
 dataset_decl = { "aln" ~ "dataset" ~ ident ~ block }
 
 // ---------- BLOCKS & STATEMENTS ----------
+=======
+invariant_decl = { "invariant" ~ WHITESPACE+ ~ ident ~ WHITESPACE* ~ ":" ~ WHITESPACE* ~ expr }
+
+block = { "{"? ~ ( stmt* ) ~ ("}" | "end" ~ WHITESPACE* ) }
+
+stmt = { ( object_decl | enum_decl | struct_decl | record_decl | mapping_decl | comment_stmt | invariant_decl | assert_stmt | let_stmt | forall_stmt | field_decl ) }
+>>>>>>> c3a1ec2 (104)
 
 // block := '{' stmt* '}' | 'is' stmt* 'end' | stmt* 'end'
 // Pest version with explicit optional elements:
@@ -71,7 +79,12 @@ stmt = _{
   | comment_stmt
 }
 
+<<<<<<< HEAD
 // ---------- OBJECT / ENUM / STRUCT / MAPPING ----------
+=======
+struct_decl = { "struct" ~ WHITESPACE+ ~ ident ~ block }
+record_decl = { "record" ~ WHITESPACE+ ~ ident ~ block }
+>>>>>>> c3a1ec2 (104)
 
 object_decl = { "object" ~ ident ~ block }
 
@@ -118,6 +131,27 @@ literal    = _{ int_lit | bool_lit | string_lit }
 
 // ---------- COMMENTS AS STATEMENTS ----------
 
+assert_stmt = { "assert" ~ WHITESPACE+ ~ expr ~ ";"? }
+let_stmt = { "let" ~ WHITESPACE+ ~ ident ~ WHITESPACE* ~ "=" ~ WHITESPACE* ~ expr ~ ";"? }
+
+forall_bind = { ident ~ WHITESPACE* ~ "in" ~ WHITESPACE* ~ ident }
+forall_bindings = { forall_bind ~ ( WHITESPACE* ~ "," ~ WHITESPACE* ~ forall_bind )* }
+forall_stmt = { "forall" ~ WHITESPACE+ ~ forall_bindings ~ (WHITESPACE* ~ "where" ~ WHITESPACE* ~ expr)? ~ ":" ~ block }
+// Basic expressions for invariants
+expr = { logical_or }
+logical_or = { logical_and ~ ( WHITESPACE* ~ "||" ~ WHITESPACE* ~ logical_and )* }
+logical_and = { equality ~ ( WHITESPACE* ~ "&&" ~ WHITESPACE* ~ equality )* }
+equality = { comparison ~ ( WHITESPACE* ~ ("==" | "!=") ~ WHITESPACE* ~ comparison )* }
+comparison = { addition ~ ( WHITESPACE* ~ ("<=" | ">=" | "<" | ">") ~ WHITESPACE* ~ addition )* }
+addition = { multiplication ~ ( WHITESPACE* ~ ("+" | "-") ~ WHITESPACE* ~ multiplication )* }
+multiplication = { unary ~ ( WHITESPACE* ~ ("*"|"/") ~ WHITESPACE* ~ unary )* }
+unary = { ("!" | "-" )* ~ primary }
+primary = { ident | number | boolean | "(" ~ WHITESPACE* ~ expr ~ WHITESPACE* ~ ")" }
+
+number = @{ ASCII_DIGIT+ ~ ("." ~ ASCII_DIGIT+)? }
+boolean = { "true" | "false" }
+
+field_decl = { ident ~ WHITESPACE* ~ ":" ~ WHITESPACE* ~ ident }
 comment_stmt = { COMMENT }
 
 // ---------- OPTIONAL / REPETITION HIGHLIGHTS (EBNF STYLE NOTES) ----------

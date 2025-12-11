@@ -1,0 +1,13 @@
+aln system BioAugBiomechICU {
+  policy ICUOverlay {
+    object PatientState {
+      mapping VitalMonitor to AlertEnvelope;
+      mapping AugmentationState to ICUGuardProfile;
+    end
+
+    // Invariants:
+    // - Augmentation state must degrade gracefully on ICU override
+    // - Fail-safe posture enforced on telemetry loss
+    // - ICU staff actions always dominate patient-device control
+  end
+}

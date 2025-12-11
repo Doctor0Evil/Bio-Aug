@@ -3,9 +3,11 @@ use std::path::PathBuf;
 use std::path::Path;
 use anyhow::Context;
 use aln_syntax::parse_aln;
+// `generate_guards` used below instead
 use aln_check::validate_aln;
 use aln_check::coverage_check;
 use csv;
+use aln_guard_codegen::generate_guards;
 mod traceability;
 
 #[derive(StructOpt)]
@@ -33,6 +35,40 @@ enum Cmd {
         target: String,
         #[structopt(long, parse(from_os_str))]
         out: PathBuf,
+    },
+    /// Generate Rust guard module from ALN invariants
+    GuardCodegen {
+        #[structopt(parse(from_os_str))]
+        file: PathBuf,
+        #[structopt(long, default_value = "aln_guards")]
+        module: String,
+        #[structopt(long, parse(from_os_str))]
+        out: PathBuf,
+    },
+    /// Run anti-riot guard checks on an ALN ledger or configuration.
+    AntiRiotCheck {
+        #[structopt(long = "blueprint", value_name = "BLUEPRINT_JSON")]
+        blueprint: String,
+        #[structopt(long = "ledger", value_name = "LEDGER_JSON")]
+        ledger: String,
+    },
+    /// Run a governance gate that evaluates anti-riot, access, and biomech guard checks
+    #[cfg(feature = "clinical-le")]
+    GovernanceGate {
+        #[structopt(long)]
+        subject_id: String,
+        #[structopt(long)]
+        emergency: bool,
+        #[structopt(long)]
+        consent_present: bool,
+        #[structopt(long)]
+        energy_cost: u64,
+        #[structopt(long)]
+        neuromod_pulses: u64,
+        #[structopt(long)]
+        sar_mw_per_kg: u32,
+        #[structopt(long)]
+        duty_cycle_pct: u8,
     },
     Trace {
         #[structopt(parse(from_os_str))]
@@ -88,7 +124,7 @@ fn main() -> anyhow::Result<()> {
             let _pairs = parse_aln(&s).context("parse error")?;
             println!("parse OK: {}", input.display());
         }
-        Cmd::Validate { input, profile } => {
+        Cmd::Validate { input, profile, require_dpia, require_dos_guard, fail_if_unverified_class_c } => {
             let s = std::fs::read_to_string(&input)?;
             // pass DPIA/DoS guard flags
             aln_check::validate_aln(&s, &profile, require_dpia, require_dos_guard).context("validation error")?;
@@ -134,6 +170,66 @@ fn main() -> anyhow::Result<()> {
                     println!("Codegen target not implemented: {}", target);
                 }
                 println!("codegen OK: {} -> {} ({})", input.display(), out.display(), target);
+        }
+        Cmd::GuardCodegen { file, module, out } => {
+                    }
+                    Cmd::AntiRiotCheck { blueprint, ledger } => {
+                        // Wire into anti_riot_runtime primitives for ledger acceptance checks.
+                        let bp = std::fs::read_to_string(&blueprint)?;
+                        let ledger = std::fs::read_to_string(&ledger)?;
+                        // TODO: deserialize and run checks against ledger using AntiRiot runtime primitives.
+                        println!("AntiRiotCheck: blueprint {} ledger {}", blueprint, ledger);
+                    }
+            #[cfg(feature = "clinical-le")]
+            Cmd::GovernanceGate { subject_id, emergency, consent_present, energy_cost, neuromod_pulses, sar_mw_per_kg, duty_cycle_pct } => {
+                // Minimal governance gate: run biomech checks and simple access rule
+                use bioaug_biomech_guards::GuardContext;
+                use bioaug_biomech_guards::bioaug_biomech_guards;
+                // Build GuardContext with minimal values; real implementation will map telemetry
+                let ctx = GuardContext { torque_nm: 0.0, current_amp: 0.0, pressure_kpa: 0.0, link_ok: true, neuromod_samples: Vec::new(), neuromod_envs: Vec::new() };
+                let torque_ok = bioaug_biomech_guards::torque_within_envelope(&ctx);
+                let current_ok = bioaug_biomech_guards::current_within_envelope(&ctx);
+                let pressure_ok = bioaug_biomech_guards::interface_pressure_within_band(&ctx);
+                let biomech_ok = torque_ok && current_ok && pressure_ok;
+
+                use anti_riot_runtime::{BlueprintConstants, ConsentState, ConsentMode, SafetyBudget, RadEnvelope, CoercionGuard, WriteInRequest};
+                use augment_governance::{AccessContext, AccessRole, FieldClass, AccessAction, evaluate_access};
+                // Coercion check via anti_riot_runtime
+                let bp = BlueprintConstants { c_e: 1.0, c_s: 1.0, max_auet_supply: 1000, max_csp_supply: 1000, base_daily_auet: 100, alpha_daily_auet: 0 };
+                let consent = ConsentState { subject_id: subject_id.clone(), mode: if consent_present { ConsentMode::Clinical } else { ConsentMode::None }, last_updated: chrono::Utc::now(), signature: String::new() };
+                let budget = SafetyBudget { max_energy_joule: 1000, used_energy_joule: 0, max_neuromod_pulses: 100, used_neuromod_pulses: 0 };
+                let rad = RadEnvelope { max_sar_mw_per_kg: 10, max_duty_cycle_pct: 50 };
+                let guard = CoercionGuard { blueprint: &bp, consent: &consent, safety_budget: &budget, rad_envelope: &rad, current_auet: 0 };
+                let write_req = WriteInRequest { subject_id: subject_id.clone(), energy_cost, neuromod_pulses, sar_mw_per_kg, duty_cycle_pct };
+                let coercion_decision = guard.evaluate(&write_req);
+
+                // Access decision via augment_governance
+                let ctx_access = AccessContext { role: AccessRole::PoliceMedic, jurisdiction: "demo".into(), case_id: None, emergency_flag: emergency, consent_present };
+                let access_decision = evaluate_access(FieldClass::NeuralData, &ctx_access, AccessAction::Write);
+                let db_access_allowed = access_decision.allowed;
+                let db_access_reason = access_decision.reason;
+
+                let out = serde_json::json!({
+                    "subject_id": subject_id,
+                    "biomech_ok": biomech_ok,
+                    "db_access_allowed": db_access_allowed,
+                    "db_access_reason": db_access_reason,
+                    "coercion_allowed": coercion_decision.allowed,
+                    "coercion_reason": coercion_decision.reason,
+                    "energy_cost": energy_cost,
+                    "neuromod_pulses": neuromod_pulses,
+                    "sar_mw_per_kg": sar_mw_per_kg,
+                    "duty_cycle_pct": duty_cycle_pct,
+                });
+                println!("{}", serde_json::to_string_pretty(&out)?);
+            }
+                    }
+            let s = std::fs::read_to_string(&file)?;
+            // minimal validation
+            // generate guards directly from the source content (codegen handles parse)
+            let code = generate_guards(&s, &module).context("guard codegen failed")?;
+            std::fs::write(&out, code)?;
+            println!("guard-codegen OK: {} -> {} (module={})", file.display(), out.display(), module);
         }
             Cmd::Trace { input } => {
                 let res = traceability::extract_traceability(input.to_str().unwrap())?;

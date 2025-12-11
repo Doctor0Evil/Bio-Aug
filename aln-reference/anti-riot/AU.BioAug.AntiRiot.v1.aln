@@ -1,0 +1,20 @@
+aln system BioAugAntiRiot {
+  policy CoercionPrevention {
+    object BCI {
+      mapping WriteInRequest to rust::anti_riot_runtime::CoercionGuard;
+    end
+  end
+
+  policy EquityAndAccess {
+    object Energy {
+      mapping AUETCaps to rust::anti_riot_runtime::BlueprintConstants;
+    end
+  end
+
+  policy Governance {
+    object Ledger {
+      mapping AdminAdjust to rust::anti_riot_runtime::validate_admin_adjust;
+      mapping BroadcastWriteIn to rust::anti_riot_runtime::deny_broadcast_write_in;
+    end
+  end
+}

@@ -1,0 +1,21 @@
+[package]
+name = "aln-guard-codegen"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+authors = ["Bio-Aug Contributors <security@bio-aug.example>"]
+description = "ALN → Rust guard code generator for neuronano-guards / bioaug-guards."
+
+[dependencies]
+anyhow = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+aln-syntax = { path = "../aln-syntax" }
+# Optional templating if needed
+# askama = "0.12"
+
+[dev-dependencies]
+proptest = "1"
+
+[features]
+community = []
+clinical-le = []

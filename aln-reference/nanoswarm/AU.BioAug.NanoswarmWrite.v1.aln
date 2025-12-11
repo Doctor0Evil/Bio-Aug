@@ -1,0 +1,37 @@
+aln system BioAugNanoswarmWriteV1 {
+  record NanoswarmWrite {
+    time_ms: int;
+    user_session_id: string;
+    device_id: string;
+    nanoswarm_node_id: string;
+    write_target: string;          # session_note|user_profile|haptic_profile|env_state
+    write_scope: string;           # local|edge|cloud
+    write_type: string;            # append|patch|delete
+    payload_class: string;         # json|cbor|text
+    payload_len: int;
+    signed: bool;
+    integrity_ok: bool;
+    consent_ok: bool;
+    safety_budget_tokens: int;
+  end
+
+  policy NanoswarmWritePolicy {
+    invariant allowed_targets:
+      forall s in NanoswarmWrite =>
+        (s.write_target == "session_note" || s.write_target == "user_profile" || s.write_target == "haptic_profile" || s.write_target == "env_state");
+
+    invariant max_payload_size:
+      forall s in NanoswarmWrite => s.payload_len <= 4096;
+
+    invariant consent_for_sensitive_targets:
+      forall s in NanoswarmWrite where (s.write_target == "user_profile" || s.write_target == "haptic_profile") =>
+        s.consent_ok && s.integrity_ok && s.signed;
+
+    invariant cloud_scope_restrictions:
+      forall s in NanoswarmWrite where s.write_scope == "cloud" =>
+        s.write_target != "haptic_profile";
+
+    invariant safety_budget_positive:
+      forall s in NanoswarmWrite => s.safety_budget_tokens > 0;
+  end
+}

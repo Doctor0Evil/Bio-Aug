@@ -1,0 +1,32 @@
+aln system BioAugBiomechCore {
+  policy ClinicalSafety {
+    object LimbInterface {
+      // Neuro-muscular coupling limits (abstract ranges only)
+      mapping JointTorque to SafeTorqueEnvelope;
+      mapping ActuatorCurrent to SafeCurrentEnvelope;
+    end
+
+    object SensorFusion {
+      mapping IMU to StabilizationEnvelope;
+      mapping PressureArray to LoadEnvelope;
+    end
+
+    // Clinical safety invariants (expressed abstractly)
+    // Examples:
+    // - Peak torque below device-rated envelope
+    // - Skin-interface pressure within safe dwell thresholds
+    // - Recovery time enforced after overload events
+  end
+
+  policy CyberPhysicalIntegrity {
+    object Telemetry {
+      mapping UplinkChannel to IntegrityProfile;
+      mapping CommandChannel to AuthProfile;
+    end
+
+    // Invariants:
+    // - Command frames must be signed and fresh
+    // - Safety-critical commands require dual-channel quorum
+    // - Telemetry gaps beyond window trigger safe fallback
+  end
+}

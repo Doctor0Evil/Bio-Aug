@@ -1,0 +1,15 @@
+aln system BioAugBiomechGuards {
+  policy GuardMapping {
+    object GuardBindings {
+      // Illustrative binding names that guard codegen will use
+      mapping SafeTorqueEnvelope to rust::bioaug_guards::torque_within_envelope;
+      mapping SafeCurrentEnvelope to rust::bioaug_guards::current_within_envelope;
+      mapping StabilizationEnvelope to rust::bioaug_guards::stability_within_band;
+      mapping LoadEnvelope to rust::bioaug_guards::interface_pressure_within_band;
+      mapping IntegrityProfile to rust::bioaug_guards::link_integrity_ok;
+      mapping AuthProfile to rust::bioaug_guards::command_auth_ok;
+      mapping AlertEnvelope to rust::bioaug_guards::icu_alerts_coherent;
+      mapping ICUGuardProfile to rust::bioaug_guards::icu_override_safe;
+    end
+  end
+}

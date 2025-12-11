@@ -9,9 +9,18 @@ anyhow = "1.0"
 aln-syntax = { path = "../aln-syntax" }
 aln-check = { path = "../aln-check" }
 aln-codegen = { path = "../aln-codegen" }
+aln-guard-codegen = { path = "../aln-guard-codegen" }
+bioaug-biomech-guards = { path = "../biomech-guards" }
+augment-governance = { path = "../augment-governance", optional = true }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 csv = "1.1"
+anti_riot_runtime = { path = "../anti_riot_runtime" }
+
+[features]
+community = []
+clinical-le = ["augment-governance"]
+default = ["community"]
 
 [[bin]]
 name = "aln"
