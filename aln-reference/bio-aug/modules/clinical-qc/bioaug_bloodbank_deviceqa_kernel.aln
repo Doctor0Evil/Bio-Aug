@@ -1,0 +1,369 @@
+# filename: bioaug_bloodbank_deviceqa_kernel.aln
+# destination: /aln-reference/bio-aug/modules/clinical-qc/
+
+ALNBEGIN module BioAug_BloodBank_DeviceQA_v1_0
+
+meta {
+  id              "BioAug.ClinicalQA.BloodBank.Device"
+  version         "1.0.0"
+  owner_namespace "BioAug.Foundation"
+  description     "Reusable ALN datasets, kernels, and policies for RhIg dosing, transfusion weights & measures, diagnostic accuracy, and medical device failsafes."
+  regulatory_scope["AABB","FDA-Class-II","IEC-60601","ISO-14971"]
+  audit_ledger    "QuantumWeb5_PrivateGovChain"
+}
+
+###############################################################################
+# 1. Core Clinical Datasets (blood volume, RhIg dosing, diagnostics)
+###############################################################################
+
+dataset "DS_BloodVolume_Estimation" {
+  description "Weight-based blood volume estimations for human patients."
+  modality    ["tabular"]
+
+  schema {
+    field "patient_id_hash" type "string" constraints ["pseudonymous"]
+    field "weight_kg"       type "float"  range [30.0, 250.0]
+    field "blood_vol_ml"    type "float"  range [1500.0, 17500.0]
+    field "method"          type "enum"   values ["70ml_per_kg","NadlerApprox"]
+  }
+
+  rules {
+    derive "blood_vol_ml" method "70ml_per_kg" formula "blood_vol_ml = 70 * weight_kg"
+  }
+
+  deployment {
+    visible_to ["BloodBank_QC_Kernel","DeviceQA_Kernel"]
+    hidden_from["consumer_apps"]
+    update_mode "append_only"
+  }
+}
+
+dataset "DS_RhIg_Dose_Calculation" {
+  description "Structured parameters for Rh immune globulin dose calculation from fetomaternal hemorrhage."
+  modality    ["tabular"]
+  source      ["Kleihauer-Betke","FlowCytometry","AABB_Protocols"][web:39][web:40][web:43][web:44][web:41][web:42]
+
+  schema {
+    field "patient_id_hash"    type "string" constraints ["pseudonymous"]
+    field "maternal_weight_kg" type "float"  range [30.0, 200.0]
+    field "maternal_blood_vol_ml" type "float" range [1500.0, 15000.0]
+    field "%_fetal_cells"      type "float"  range [0.0, 5.0]
+    field "FMH_volume_ml"      type "float"  range [0.0, 1000.0]
+    field "RhIg_vials_300ug"   type "int"    range [1, 50]
+  }
+
+  rules {
+    derive "maternal_blood_vol_ml" method "70ml_per_kg"
+      formula "maternal_blood_vol_ml = 70 * maternal_weight_kg"[web:43]
+
+    derive "FMH_volume_ml"
+      formula "FMH_volume_ml = (%_fetal_cells / 100.0) * maternal_blood_vol_ml"[web:40][web:43]
+
+    derive "RhIg_vials_300ug"
+      formula "RhIg_vials_300ug = ceil(FMH_volume_ml / 30.0) + 1"[web:39][web:40][web:41]
+  }
+
+  deployment {
+    visible_to ["BloodBank_QC_Kernel"]
+    hidden_from["consumer_apps","untrusted_analytics"]
+    update_mode "append_only+transfusion_physician_signed"
+  }
+}
+
+dataset "DS_Diagnostic_Accuracy" {
+  description "Canonical diagnostic accuracy metrics: sensitivity, specificity, PPV, NPV, likelihood ratios."[web:32][web:46][web:48]
+  modality    ["tabular"]
+
+  schema {
+    field "test_id"        type "string"
+    field "TP"             type "int"    range [0, 1000000]
+    field "FP"             type "int"    range [0, 1000000]
+    field "FN"             type "int"    range [0, 1000000]
+    field "TN"             type "int"    range [0, 1000000]
+    field "sensitivity"    type "float"  range [0.0, 1.0]
+    field "specificity"    type "float"  range [0.0, 1.0]
+    field "prevalence"     type "float"  range [0.0, 1.0]
+    field "PPV"            type "float"  range [0.0, 1.0]
+    field "NPV"            type "float"  range [0.0, 1.0]
+    field "LR_pos"         type "float"  range [0.0, 1e6]
+    field "LR_neg"         type "float"  range [0.0, 1e6]
+  }
+
+  derivation {
+    rule "compute_sensitivity" formula "sensitivity = TP / (TP + FN)"
+    rule "compute_specificity" formula "specificity = TN / (TN + FP)"
+    rule "compute_prevalence"  formula "prevalence  = (TP + FN) / (TP + FP + FN + TN)"
+    rule "compute_PPV"         formula "PPV = (sensitivity * prevalence) / (sensitivity * prevalence + (1 - specificity) * (1 - prevalence))"
+    rule "compute_NPV"         formula "NPV = (specificity * (1 - prevalence)) / ((1 - sensitivity) * prevalence + specificity * (1 - prevalence))"
+    rule "compute_LR_pos"      formula "LR_pos = sensitivity / (1 - specificity)"
+    rule "compute_LR_neg"      formula "LR_neg = (1 - sensitivity) / specificity"
+  }
+
+  deployment {
+    visible_to ["BloodBank_QC_Kernel","DeviceQA_Kernel"]
+    hidden_from["consumer_apps"]
+    update_mode "append_only"
+  }
+}
+
+###############################################################################
+# 2. Device Risk and Failsafe Datasets
+###############################################################################
+
+dataset "DS_Device_RiskMatrix" {
+  description "Risk values per ISO 14971: probability × severity, for device hazardous situations."[web:45][web:47]
+  modality    ["tabular"]
+
+  schema {
+    field "hazard_id"   type "string"
+    field "P_occurrence"type "float" range [0.0, 1.0]
+    field "S_severity"  type "float" range [1.0, 5.0]
+    field "R_risk"      type "float" range [0.0, 5.0]
+    field "R_threshold" type "float" range [0.0, 5.0]
+    field "risk_state"  type "enum"  values ["ACCEPTABLE","MITIGATION_REQUIRED","UNACCEPTABLE"]
+  }
+
+  derivation {
+    rule "compute_R" formula "R_risk = P_occurrence * S_severity"
+    rule "compute_risk_state" {
+      formula_if "R_risk <= R_threshold"       -> "risk_state = 'ACCEPTABLE'"
+      formula_if "R_risk > R_threshold"        -> "risk_state = 'MITIGATION_REQUIRED'"
+    }
+  }
+
+  deployment {
+    visible_to ["DeviceQA_Kernel"]
+    hidden_from["consumer_apps"]
+    update_mode "append_only+QA_signed"
+  }
+}
+
+dataset "DS_Device_SafetyFactor" {
+  description "Mechanical/electrical safety factors for essential performance parameters."[web:31][web:34]
+  modality    ["tabular"]
+
+  schema {
+    field "parameter_id" type "string"
+    field "Q_fail"       type "float"
+    field "Q_max_use"    type "float"
+    field "SafetyFactor" type "float"
+    field "SF_required"  type "float"
+    field "SF_state"     type "enum" values ["OK","BELOW_REQUIREMENT"]
+  }
+
+  derivation {
+    rule "compute_SF" formula "SafetyFactor = Q_fail / Q_max_use"
+    rule "compute_SF_state" {
+      formula_if "SafetyFactor >= SF_required" -> "SF_state = 'OK'"
+      formula_if "SafetyFactor <  SF_required" -> "SF_state = 'BELOW_REQUIREMENT'"
+    }
+  }
+
+  deployment {
+    visible_to ["DeviceQA_Kernel"]
+    hidden_from["consumer_apps"]
+    update_mode "append_only"
+  }
+}
+
+###############################################################################
+# 3. Blood Bank QC Kernel (weights, RhIg, diagnostics)
+###############################################################################
+
+kernel "BloodBank_QC_Kernel" {
+  host_device "Safety_NeuroCore"  # or equivalent clinical HSM
+
+  properties {
+    immutable_firmware      true
+    accepts_downloaded_code false
+  }
+
+  capabilities {
+
+    function "calc_blood_volume_ml" {
+      inputs  ["weight_kg"]
+      outputs ["blood_vol_ml"]
+      steps {
+        compute "blood_vol_ml = 70.0 * weight_kg"   # 70 mL/kg approximation.[web:43]
+        assert  "blood_vol_ml >= 1500.0 && blood_vol_ml <= 17500.0"
+      }
+    }
+
+    function "calc_RhIg_dose_vials_300ug" {
+      inputs  ["maternal_weight_kg","pct_fetal_cells"]
+      outputs ["maternal_blood_vol_ml","FMH_volume_ml","RhIg_vials_300ug"]
+      steps {
+        compute "maternal_blood_vol_ml = 70.0 * maternal_weight_kg"[web:43]
+        compute "FMH_volume_ml = (pct_fetal_cells / 100.0) * maternal_blood_vol_ml"[web:40][web:43]
+        compute "RhIg_raw = FMH_volume_ml / 30.0"  # 1 vial per 30 mL fetal whole blood.[web:39][web:40]
+        compute "RhIg_ceiled = ceil(RhIg_raw)"
+        compute "RhIg_vials_300ug = RhIg_ceiled + 1"  # add 1 vial safety margin.[web:39][web:40][web:41]
+        assert  "RhIg_vials_300ug >= 1 && RhIg_vials_300ug <= 50"
+      }
+    }
+
+    function "calc_diagnostic_metrics" {
+      inputs  ["TP","FP","FN","TN"]
+      outputs ["sensitivity","specificity","prevalence","PPV","NPV","LR_pos","LR_neg"]
+      steps {
+        compute "TP_f = float(TP); FP_f = float(FP); FN_f = float(FN); TN_f = float(TN)"
+        compute "sensitivity = TP_f / (TP_f + FN_f)"[web:32][web:48][web:46]
+        compute "specificity = TN_f / (TN_f + FP_f)"[web:32][web:48][web:46]
+        compute "prevalence  = (TP_f + FN_f) / (TP_f + FP_f + FN_f + TN_f)"[web:32][web:48][web:46]
+        compute "PPV = (sensitivity * prevalence) / (sensitivity * prevalence + (1 - specificity) * (1 - prevalence))"[web:32][web:48][web:46]
+        compute "NPV = (specificity * (1 - prevalence)) / ((1 - sensitivity) * prevalence + specificity * (1 - prevalence))"[web:32][web:48][web:46]
+        compute "LR_pos = sensitivity / (1 - specificity)"[web:32][web:48]
+        compute "LR_neg = (1 - sensitivity) / specificity"[web:32][web:48]
+      }
+    }
+  }
+}
+
+###############################################################################
+# 4. Device QA Kernel (risk, safety factors, failsafes)
+###############################################################################
+
+kernel "DeviceQA_Kernel" {
+  host_device "Safety_NeuroCore"
+
+  properties {
+    immutable_firmware      true
+    accepts_downloaded_code false
+  }
+
+  capabilities {
+
+    function "compute_risk_index" {
+      inputs  ["P_occurrence","S_severity"]
+      outputs ["R_risk"]
+      steps {
+        compute "R_risk = P_occurrence * S_severity"  # ISO 14971 risk definition.[web:45][web:47]
+      }
+    }
+
+    function "risk_exceeds_threshold" {
+      inputs  ["P_occurrence","S_severity","R_threshold"]
+      outputs ["risk_state"]
+      steps {
+        compute "R_risk = P_occurrence * S_severity"
+        if "R_risk <= R_threshold" { set "risk_state = 'ACCEPTABLE'"; }
+        if "R_risk >  R_threshold" { set "risk_state = 'MITIGATION_REQUIRED'"; }
+      }
+    }
+
+    function "compute_safety_factor" {
+      inputs  ["Q_fail","Q_max_use","SF_required"]
+      outputs ["SafetyFactor","SF_state"]
+      steps {
+        compute "SafetyFactor = Q_fail / Q_max_use"[web:31][web:34]
+        if "SafetyFactor >= SF_required" { set "SF_state = 'OK'"; }
+        if "SafetyFactor <  SF_required" { set "SF_state = 'BELOW_REQUIREMENT'"; }
+      }
+    }
+
+    function "single_fault_safety_probability" {
+      inputs  ["P_normal","P_fault"]
+      outputs ["P_safe"]
+      steps {
+        compute "P_safe = P_normal * P_fault"  # combined probability both regimes remain safe.[web:31][web:34]
+      }
+    }
+  }
+}
+
+###############################################################################
+# 5. Policies: Failsafe Triggers for Blood Bank & Devices
+###############################################################################
+
+policy "BloodBank_QA_Policy" {
+  description "Enforces safe bounds for RhIg dose and blood volume calculations."
+
+  rule "RhIg_dose_upper_bound" {
+    match {
+      source.kernel "BloodBank_QC_Kernel"
+      target.action "issue_RhIg_order"
+    }
+    condition {
+      field "RhIg_vials_300ug" in_dataset "DS_RhIg_Dose_Calculation" must_satisfy "RhIg_vials_300ug <= 50"
+    }
+    action {
+      deny_if_violation
+      log "rhig_dose_out_of_bounds"
+      trigger "TRANSFUSION_PHYSICIAN_REVIEW"
+    }
+  }
+
+  rule "max_blood_draw_fraction" {
+    match {
+      source.kernel "BloodBank_QC_Kernel"
+      target.action "schedule_blood_draw"
+    }
+    condition {
+      compute "V_blood = 70 * weight_kg"
+      compute "V_planned_fraction = V_draw / V_blood"
+      require "V_planned_fraction <= 0.15"  # ≤15% total volume.[web:43]
+    }
+    action {
+      deny_if_violation
+      log "blood_draw_fraction_exceeded"
+      trigger "PATIENT_SAFETY_REVIEW"
+    }
+  }
+}
+
+policy "Device_Failsafe_Policy" {
+  description "IEC 60601 / ISO 14971 aligned triggers for device shutdown or mitigation based on risk and safety factor."[web:31][web:34][web:45][web:47]
+
+  rule "risk_based_shutdown" {
+    match {
+      source.kernel "DeviceQA_Kernel"
+      target.action "continue_essential_performance"
+    }
+    condition {
+      field "risk_state" in_dataset "DS_Device_RiskMatrix" must_satisfy "risk_state != 'UNACCEPTABLE'"
+    }
+    action {
+      if_violation {
+        deny
+        trigger "DEVICE_HARD_SHUTDOWN"
+        log "unacceptable_risk_detected"
+      }
+    }
+  }
+
+  rule "safety_factor_guard" {
+    match {
+      source.kernel "DeviceQA_Kernel"
+      target.action "enable_full_load"
+    }
+    condition {
+      field "SF_state" in_dataset "DS_Device_SafetyFactor" must_satisfy "SF_state == 'OK'"
+    }
+    action {
+      if_violation {
+        deny
+        trigger "LOAD_LIMIT_MODE"
+        log "safety_factor_below_requirement"
+      }
+    }
+  }
+}
+
+ALNEND
+
+[1](https://www.bbguy.org/education/videos/rhigdosage/)
+[2](https://www.bbguy.org/2023/02/01/099/)
+[3](https://www.youtube.com/watch?v=nxPkKNOZ1k8)
+[4](http://www.captodayonline.com/Archives/feature_stories/0508_RhIG_calculations.html)
+[5](https://www.mdapp.co/rhogam-dose-calculator-for-fetal-maternal-hemorrhage-601/)
+[6](https://oai.zbmath.org/static/terms-and-conditions.html)
+[7](https://www.droracle.ai/articles/267907/what-is-the-required-dose-of-rh-immune-globulin)
+[8](https://api.zbmath.org/static/terms-and-conditions.html)
+[9](https://www.youtube.com/watch?v=s2mc12g_fxU)
+[10](https://api.zbmath.org)
+[11](https://drzeydbloodbank.com/2020/12/14/rh-immune-globulin-candidacy-triage/)
+[12](https://saskblood.ca/wp-content/uploads/2023/03/RhIg-Monograph_Information-Document.pdf)
+[13](https://60601-1.com/wp-content/uploads/2019/04/meca-60601-1-ed3.1-evaluation-package-beta-2018-11-24.pdf)
+[14](https://qservegroup.com/blog/en/why-ppv-and-npv-should-be-considered-when-setting-sensitivity-and-specificity-requirements)
+[15](https://www.greenlight.guru/blog/iso-14971-risk-management)
+[16](https://www.frontiersin.org/journals/public-health/articles/10.3389/fpubh.2017.00307/full)
