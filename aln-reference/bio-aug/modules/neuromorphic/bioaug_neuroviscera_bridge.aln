@@ -1,0 +1,447 @@
+# filename: bioaug_neuroviscera_bridge.aln
+# destination: /aln-reference/bio-aug/modules/neuromorphic/
+
+ALNBEGIN module BioAug_NeuroViscera_Bridge_v1_0
+
+meta {
+  id              "BioAug.NeuroViscera.Bridge"
+  version         "1.0.0"
+  owner_namespace "BioAug.Foundation"
+  description     "Non-wearable neuromorphic interface layer that couples cortical, spinal, and autonomic signals to implantable devices using medically-aligned, rights-preserving, malware-immune architecture."
+  regulatory_scope["FDA-Class-III","IEC-60601","ISO-14971","HIPAA","GDPR-HC"]
+  audit_ledger    "QuantumWeb5_PrivateGovChain"
+  anchorage_profile "BioAug-QA-NeuroViscera-01"
+}
+
+################################################################################
+# 1. Neuromorphic Asset Model (non-wearable, tissue-integrated) [file:2][file:4]
+################################################################################
+
+devices {
+  # Spinal / peripheral neuromorphic relay
+  device "NeuroSpine_Interface_Array" {
+    class              "neuromorphic.implant.spinal"
+    bus                "LVDS-diff.secure"
+    electrode_count    128
+    sample_rate_hz     5000
+    bidirectional      true
+    regions            ["C5-T1","L4-S1"]
+    stimulation_max_mA 4.0
+    stimulation_max_V  12.0
+    secure_boot        true
+    firmware_mode      "signed-readonly"
+    allows_untrusted   false
+  }
+
+  # Enteric / visceral neuromorphic module
+  device "Viscera_NeuroMesh" {
+    class              "neuromorphic.implant.viscera"
+    bus                "CAN-FD.isolated"
+    node_count         96
+    sample_rate_hz     1000
+    targets            ["vagus","enteric_plexus","sympathetic_chain"]
+    stimulation_max_mA 3.0
+    stimulation_max_V  8.0
+    coating_materials  ["parylene-C","PtIr","hydrogel"]
+  }
+
+  # Cortical intent decoder (non-wearable)
+  device "Cortex_IntentDecoder_Module" {
+    class              "bci.implant.cortical"
+    bus                "SPI4.secured"
+    channels           64
+    sample_rate_hz     2000
+    role               "intent_only_no_direct_stim"
+    export_mode        "derived_features_only"
+  }
+
+  # Central neuromorphic bridge ASIC
+  device "NeuroBridge_ASIC" {
+    class              "neuromorphic.bridge.kernel"
+    bus                "PCIe-Gen4.x4"
+    tdp_watts          10
+    secure_boot        true
+    allows_untrusted   false
+    role               "BioAug_NeuroVisceraKernel"
+    pqc_suite          ["ML-KEM","SLH-DSA","AES256-GCM","SHA3-512"]
+  }
+}
+
+channels {
+  layer "bio.physical" {
+    scope ["spinal_cord","enteric_nervous_system","vagus_nerve","organs"]
+    quarantine_default "hard"
+  }
+
+  layer "bio.cybernetic" {
+    scope ["NeuroSpine_Interface_Array","Viscera_NeuroMesh","Cortex_IntentDecoder_Module","NeuroBridge_ASIC"]
+    quarantine_default "hard"
+  }
+
+  layer "digital.ai" {
+    scope ["assistive_models","decision_support","logging_services"]
+    quarantine_default "strict"
+  }
+}
+
+################################################################################
+# 2. Rights + Layer Enforcement for Neuromorphic Paths [file:2][file:4]
+################################################################################
+
+rights_profile "AugmentedIndividual.NeuroViscera" {
+  right "existence_safety" {
+    description "Spinal, cortical, and visceral neuromodulation must never reduce survival or critical organ function."
+    enforce {
+      on_risk_score >= 0.75 -> trigger "NEUROVISCERA_FULL_SHUTDOWN"
+      always_favor  "baseline_autonomic_patterns"
+    }
+  }
+
+  right "autonomic_integrity" {
+    description "No model or device may chronically bias autonomic balance for non-clinical reasons."
+    enforce {
+      forbid "persistent_sympathetic_bias" origin "commercial","performance"
+      forbid "appetite_or_reward_modulation" origin "advertising","behavioral_nudging"
+      require "clinical_protocol_id" for any "long_term_autonomic_therapy"
+    }
+  }
+
+  right "neural_privacy" {
+    description "Spinal and visceral neural patterns are treated as PHI; export is strictly controlled."
+    enforce {
+      forbid_stream "raw_spike_trains" to "digital.ai"
+      allow_stream  "derived_clinical_features" to "digital.ai" only_if "DP_epsilon<=1.0"
+      require "immutable_audit_log" for every export
+    }
+  }
+
+  right "full_audit_and_shutdown" {
+    description "User and clinician can view all neuromorphic interactions and request shutdown."
+    enforce {
+      allow "user_request_shutdown" -> trigger "NEUROVISCERA_SOFT_SHUTDOWN"
+      allow "clinician_emergency_stop" -> trigger "NEUROVISCERA_HARD_SHUTDOWN"
+      require "explainability_report" for all non-trivial actuation sequences
+    }
+  }
+}
+
+policy "NeuroViscera_LayerBoundary" {
+  description "Enforces safe mapping between cortical intent, spinal relay, and visceral neuromodulation."
+
+  rule "no_internet_to_neuroviscera" {
+    match {
+      source.layer  "digital.ai"
+      source.origin ["internet","cloud","3rdparty_model"]
+      target.layer  "bio.cybernetic"
+      target.device ["NeuroSpine_Interface_Array","Viscera_NeuroMesh"]
+      target.action ["stimulate","override_pattern"]
+    }
+    action {
+      deny
+      log "neuroviscera_crosslayer_violation"
+      trigger "FORENSIC_AUDIT"
+    }
+  }
+
+  rule "intent_is_advisory_not_actuator" {
+    match {
+      source.device "Cortex_IntentDecoder_Module"
+      target.device ["NeuroSpine_Interface_Array","Viscera_NeuroMesh"]
+      target.action ["stimulate","override_pattern"]
+    }
+    action {
+      require "NeuroBridge_ASIC" gate "NeuroViscera_Kernel.gate_neural_mapping"
+      if_not_via_kernel { deny; log "bypass_attempt"; }
+    }
+  }
+}
+
+################################################################################
+# 3. Neuromorphic Safety Kernel (bridge between hardware and biology) [file:2][file:4]
+################################################################################
+
+kernel "NeuroViscera_Kernel" {
+  host_device "NeuroBridge_ASIC"
+
+  properties {
+    immutable_firmware  true
+    accepts_downloaded_code false
+    allowed_update_mode "theatre_only+multisig+regulator"
+  }
+
+  capabilities {
+
+    function "map_intent_to_spinal_pattern" {
+      inputs  ["intent_feature_vector","spinal_state_vector","safety_envelope_spinal"]
+      outputs ["candidate_spinal_pattern"]
+      steps {
+        constrain_pattern within "safety_envelope_spinal"
+        check_risk_model  source "spinal_risk_model_v1" threshold 0.7
+        if_risk_ge        0.7 { zero_pattern; raise "SPINAL_PATTERN_BLOCKED"; }
+        log "spinal_mapping_decision" to "QuantumWeb5_PrivateGovChain"
+      }
+    }
+
+    function "map_intent_to_visceral_pattern" {
+      inputs  ["intent_feature_vector","visceral_state_vector","safety_envelope_viscera"]
+      outputs ["candidate_visceral_pattern"]
+      steps {
+        constrain_pattern within "safety_envelope_viscera"
+        check_risk_model  source "viscera_risk_model_v1" threshold 0.7
+        enforce_homeostasis_range metrics ["HR","BP","HRV","GI_motility"]
+        if_risk_ge        0.7 { zero_pattern; raise "VISCERA_PATTERN_BLOCKED"; }
+        log "viscera_mapping_decision" to "QuantumWeb5_PrivateGovChain"
+      }
+    }
+
+    function "gate_neural_mapping" {
+      inputs  ["intent_feature_vector","patient_state_neuroviscera"]
+      outputs ["approved_spinal_pattern","approved_visceral_pattern"]
+      steps {
+        derive "spinal_state_vector"   from "patient_state_neuroviscera"
+        derive "visceral_state_vector" from "patient_state_neuroviscera"
+        use_dataset "DS04_Spinal_SafetyEnvelope"
+        use_dataset "DS05_Viscera_SafetyEnvelope"
+        call "map_intent_to_spinal_pattern"
+        call "map_intent_to_visceral_pattern"
+      }
+    }
+
+    function "cross_layer_quarantine" {
+      inputs  ["event"]
+      outputs ["ticket_id"]
+      steps {
+        classify_event model "neuroviscera_anomaly_v1"
+        if_class_in ["policy_violation","malware_suspect"] {
+          freeze_interfaces devices ["NeuroSpine_Interface_Array","Viscera_NeuroMesh"]
+          snapshot_state    to "forensic_vault"
+          emit_metric       "neuroviscera_quarantine_events_total++"
+        }
+      }
+    }
+  }
+}
+
+################################################################################
+# 4. Concrete Safety Datasets for Neuromorphic Control (non-theoretical) [file:2]
+################################################################################
+
+dataset "DS04_Spinal_SafetyEnvelope" {
+  description "Spinal neuromodulation safety envelope: current, voltage, frequency, and duty cycle bounds under known clinical indications."
+  modality     ["tabular","time_series"]
+  source       ["clinical_trials_spinal_cord_stimulation","postmarket_surveillance"]
+
+  schema {
+    field "patient_id_hash"        type "string" constraints ["pseudonymous"]
+    field "indication_icd10"       type "string"
+    field "spinal_level"           type "enum" values ["C5","C6","C7","T1","L4","L5","S1"]
+    field "tissue_impedance_kOhm"  type "float" range [0.5, 20.0]
+    field "stimulation_V"          type "float" range [0.0, 15.0]
+    field "stimulation_mA"         type "float" range [0.0, 6.0]
+    field "pulse_width_us"         type "float" range [30.0, 1000.0]
+    field "frequency_hz"           type "float" range [2.0, 1000.0]
+    field "burst_pattern"          type "enum"  values ["tonic","burst","high_freq"]
+    field "session_duration_min"   type "float" range [1.0, 720.0]
+    field "acute_adverse_event"    type "bool"
+    field "chronic_adverse_event"  type "bool"
+    field "regulatory_flag"        type "enum"  values ["APPROVED","CAUTION","FORBIDDEN"]
+  }
+
+  deployment {
+    visible_to ["NeuroBridge_ASIC"]
+    hidden_from["digital.ai","consumer_apps"]
+    update_mode "append_only+regulator_signed"
+  }
+}
+
+dataset "DS05_Viscera_SafetyEnvelope" {
+  description "Clinically-derived safety bounds for vagus and enteric neuromodulation, stratified by diagnosis and organ state."
+  modality     ["tabular","time_series"]
+  source       ["vagus_nerve_stimulation_registry","GI_motility_trials"]
+
+  schema {
+    field "patient_id_hash"        type "string" constraints ["pseudonymous"]
+    field "indication_icd10"       type "string"
+    field "target_structure"       type "enum" values ["vagus_cervical","vagus_abdominal","myenteric_plexus","submucosal_plexus"]
+    field "baseline_HR"            type "float" range [30, 200]
+    field "baseline_BP_systolic"   type "float" range [70, 220]
+    field "baseline_GI_motility_idx" type "float" range [0.0, 1.0]
+    field "stimulation_V"          type "float" range [0.0, 10.0]
+    field "stimulation_mA"         type "float" range [0.0, 5.0]
+    field "pulse_width_us"         type "float" range [50.0, 1000.0]
+    field "frequency_hz"           type "float" range [1.0, 200.0]
+    field "session_duration_min"   type "float" range [1.0, 240.0]
+    field "autonomic_shift_index"  type "float" range [-1.0,1.0]
+    field "adverse_event_flag"     type "bool"
+    field "regulatory_flag"        type "enum" values ["APPROVED","CAUTION","FORBIDDEN"]
+  }
+
+  deployment {
+    visible_to ["NeuroBridge_ASIC"]
+    hidden_from["digital.ai","sim.xr_raw"]
+    update_mode "append_only+regulator_signed"
+  }
+}
+
+dataset "DS06_NeuroViscera_StateVector" {
+  description "Real-time multimodal state vector fusing spinal, cortical-intent, and visceral metrics for gating neuromorphic outputs."
+  modality     ["time_series"]
+  sampling_hz  50
+
+  schema {
+    field "HR"                     type "float" range [30, 200]
+    field "HRV_ms"                 type "float" range [10, 250]
+    field "BP_systolic"            type "float" range [70, 220]
+    field "GI_motility_idx"        type "float" range [0.0, 1.0]
+    field "pain_score_scaled"      type "float" range [0.0, 1.0]
+    field "motor_intent_flag"      type "enum"  values ["REST","VOLUNTARY","INVOLUNTARY"]
+    field "spinal_excitability_idx"type "float" range [0.0, 1.0]
+    field "vagal_tone_idx"         type "float" range [0.0, 1.0]
+    field "stress_index"           type "float" range [0.0, 1.0]
+  }
+
+  use_in {
+    model "spinal_risk_model_v1"
+    model "viscera_risk_model_v1"
+    gate  "NeuroViscera_Kernel.gate_neural_mapping"
+  }
+
+  privacy {
+    store_locally_only true
+    export_only_as     "aggregated+DP" epsilon 0.5
+  }
+}
+
+################################################################################
+# 5. Compatibility Bridge Between Devices and Biology (non-wearable focus) [file:4]
+################################################################################
+
+compatibility_bridge "NeuroViscera_AssetBridge" {
+  description "Declarative mapping layer that standardizes neuromorphic assets across vendors while representing biological reality as first-class signals."
+
+  biological_endpoints {
+    endpoint "SpinalMotorPool" {
+      structure   ["alpha_motoneurons","interneurons"]
+      function    "muscle_activation_control"
+      signal_types["spike_rate","field_potential"]
+    }
+    endpoint "VagusCardiac" {
+      structure   ["vagal_afferents","vagal_efferents"]
+      function    "heart_rate_and_autonomic_balance"
+      signal_types["spike_rate","firing_pattern"]
+    }
+    endpoint "EntericPlexus" {
+      structure   ["myenteric_neurons","glia"]
+      function    "GI_motility_and_secretion"
+      signal_types["field_potential","multiunit"]
+    }
+  }
+
+  neuromorphic_assets {
+    asset "SpinalArray_Generic" {
+      compatible_devices ["NeuroSpine_Interface_Array"]
+      io_modes           ["record","stimulate"]
+      abstract_channels  128
+      biological_targets ["SpinalMotorPool"]
+    }
+
+    asset "VisceraMesh_Generic" {
+      compatible_devices ["Viscera_NeuroMesh"]
+      io_modes           ["record","stimulate"]
+      abstract_channels  96
+      biological_targets ["VagusCardiac","EntericPlexus"]
+    }
+  }
+
+  mapping_rules {
+    rule "normalize_spinal_impedance" {
+      input  "raw_impedance_kOhm"
+      output "normalized_impedance"
+      transform "z_score_by_level"
+    }
+
+    rule "normalize_firing_rate" {
+      input  "raw_spike_rate"
+      output "normalized_spike_rate"
+      transform "rate/(max_rate_by_region)"
+    }
+
+    rule "map_vendor_units_to_biological_units" {
+      input  "vendor_current_mA"
+      output "axon_activation_probability"
+      transform "lookup_curve_from_DS04_Spinal_SafetyEnvelope"
+    }
+  }
+}
+
+################################################################################
+# 6. Governance, Audit, and Safe Removal for Neuromorphic Assets [file:2][file:4]
+################################################################################
+
+governance {
+  roles {
+    role "Augmented_User" {
+      rights_profile "AugmentedIndividual.NeuroViscera"
+      can {
+        request "NEUROVISCERA_SOFT_SHUTDOWN"
+        view    "neuroviscera_audit_log"
+      }
+    }
+
+    role "Clinician" {
+      can {
+        adjust "therapy_params_spinal" within "DS04_Spinal_SafetyEnvelope"
+        adjust "therapy_params_viscera" within "DS05_Viscera_SafetyEnvelope"
+        trigger "NEUROVISCERA_HARD_SHUTDOWN"
+      }
+    }
+
+    role "Regulator" {
+      can {
+        read  "DS04_Spinal_SafetyEnvelope"
+        read  "DS05_Viscera_SafetyEnvelope"
+        audit "NeuroViscera_Kernel_decisions"
+      }
+    }
+
+    role "Developer" {
+      can   { submit "models" to "sandbox_only" }
+      cannot {
+        write_firmware "NeuroBridge_ASIC"
+        bypass         "NeuroViscera_LayerBoundary"
+      }
+    }
+  }
+
+  safe_removal "NeuroViscera_Module_SafeRemoval" {
+    steps {
+      step 1 "integrity_check" {
+        action "assess neuromorphic_module_integrity"
+        if "breach_or_hazard" -> proceed
+      }
+      step 2 "multisig_approval" {
+        signers ["Clinician","HospitalCISO","RegulatorNode"]
+      }
+      step 3 "ledger_anchor" {
+        action "hash_removal_request_sha3_512"
+        anchor "QuantumWeb5_PrivateGovChain"
+      }
+      step 4 "deactivate_and_isolate" {
+        action "disable_all_neuromorphic_outputs_preserve_audit"
+      }
+      step 5 "post_removal_audit" {
+        action "record_success_or_failure"
+        fallback "auto_disable_all_outputs_and_escalate_if_failure"
+      }
+    }
+  }
+
+  audit_metrics {
+    prometheus_namespace "bioaug_neuroviscera"
+    counter   "neuroviscera_quarantine_events_total" help "Total neuromorphic quarantine events."
+    counter   "neuroviscera_actuation_blocks_total"  help "Blocked neuromorphic actuation attempts."
+    histogram "neuroviscera_actuation_intensity"     buckets [0.1,0.5,1.0,2.0,4.0]
+  }
+}
+
+ALNEND
