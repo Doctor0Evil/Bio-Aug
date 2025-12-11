@@ -1,0 +1,294 @@
+module UnifiedAiAssetRegistry_v1_0_0 {
+
+    // ----------------------------------------------------------------------
+    // 1. Registry‑level configuration and safety envelope
+    // ----------------------------------------------------------------------
+
+    constants {
+        REGISTRY_ID                  : "ffffffff-ffff-4fff-8fff-fffffffffff1";
+        REGISTRY_COMPLIANCE_TAG      : "GMP-CLASS-A-AI-ASSET";
+        REGISTRY_MIN_QPU_TOPS        : 1000.000;     // minimal aggregate compute capacity
+        REGISTRY_LATENCY_BUDGET_MS   : 12.000;       // max per‑lookup latency
+        REGISTRY_HEX_FINGERPRINT     : "B4E2D7A1C9F0837AD1E4B6C3F9A2D5E1B7C8D9F0A3E6B1C4D7F2A9E0C5B8D3F6";
+    }
+
+    biocompatibility_matrix AiAssetBioEnvelope {
+        neural_interface_safety[]    : [0.98,0.97,0.96,0.95,0.97,0.96,0.95,0.94];
+        cognitive_overload_risk[]    : [0.05,0.07,0.08,0.09,0.06,0.07,0.08,0.10];
+        privacy_leakage_risk[]       : [0.03,0.04,0.05,0.06,0.04,0.05,0.06,0.07];
+        clinical_evidence_strength[] : [0.82,0.84,0.86,0.88,0.83,0.85,0.87,0.89];
+    }
+
+    hex_dataset AiAssetBehaviorFingerprintSeed {
+        feature_vector_256bit : "DDDDDDDDDDDD4DDD8DDDDDDDDDDD4DDD8DDDDDDDDDDD4DDD8DDDDDDDDDDD4DDD8";
+    }
+
+    // ----------------------------------------------------------------------
+    // 2. Key asset categories (models, datasets, tools, policies, flows)
+    // ----------------------------------------------------------------------
+
+    enum AssetCategory {
+        MODEL,          // e.g. LMs, vision models, control policies
+        DATASET,        // training / eval datasets, curated corpora
+        TOOLING,        // SDKs, libraries, runtimes
+        PIPELINE,       // end‑to‑end training / eval / CI flows
+        POLICY,         // safety, governance, alignment artefacts
+        EVALUATION      // benchmarks, scorers, test harnesses
+    }
+
+    enum Modality {
+        TEXT,
+        VISION,
+        AUDIO,
+        MULTIMODAL,
+        CONTROL,
+        BIOSIGNAL
+    }
+
+    enum InterfaceProfile {
+        CLI,
+        REST,
+        GRPC,
+        ON_DEVICE,
+        EMBEDDED_FPGA,
+        NEUROLINK
+    }
+
+    enum LicenseClass {
+        PERMISSIVE,         // MIT / Apache‑2 / BSD
+        COPYLEFT,           // GPL‑family
+        PROPRIETARY,
+        CLINICAL_RESTRICTED // clinical / medical use constraints
+    }
+
+    enum SafetyLevel {
+        EXPERIMENTAL,
+        RESEARCH,
+        CLINICAL_PILOT,
+        CLINICAL_PRODUCTION
+    }
+
+    enum ProvenanceSourceType {
+        GITHUB_REPO,
+        GIT_TAG,
+        DATASET_URL,
+        REGULATORY_SUBMISSION,
+        INTERNAL_REGISTRY
+    }
+
+    enum LicenseUseRestriction {
+        UNRESTRICTED,
+        NON_COMMERCIAL,
+        RESEARCH_ONLY,
+        COMMERCIAL_ALLOWED
+    }
+
+    enum LicenseAttributionRequirement {
+        NONE,
+        REQUIRED,
+        SHARE_ALIKE
+    }
+
+    // ----------------------------------------------------------------------
+    // 3. Core AI asset metadata and tag schema
+    // ----------------------------------------------------------------------
+
+    entity AiAsset {
+        id                          : uuid;
+        category                    : AssetCategory;
+        name                        : string;
+        short_description           : string;
+        provider                    : string;       // e.g. GitHub org, lab, vendor
+        modality                    : Modality;
+        interface_profile           : InterfaceProfile;
+        primary_language            : string;       // e.g. "en", "multi"
+        version_tag                 : string;       // semantic version or commit hash
+        device_profile              : string;       // e.g. "neuro_nanoswarm_v1"
+        ops_threshold_tops          : float;        // minimal required TOPS
+        latency_budget_ms           : float;        // per‑call budget for real‑time use
+        max_power_watts             : float;
+        aln_schema_uri              : string;
+        homepage_uri                : string;
+        documentation_uri           : string;
+        // Tagging and search metadata
+        tags                        : list<string>; // controlled vocab where possible[web:23][web:28]
+        domain_tags                 : list<string>; // e.g. "cardiology", "robotics"
+        risk_tags                   : list<string>; // e.g. "bias_fairness", "privacy_sensitive"
+        // Governance
+        safety_level                : SafetyLevel;
+        license_class               : LicenseClass;
+        is_clinically_validated     : bool;
+        is_public_discoverable      : bool;
+        created_at_utc              : timestamp;
+        updated_at_utc              : timestamp;
+    }
+
+    // ----------------------------------------------------------------------
+    // 4. External repository mapping (GitHub, datasets, registry links)
+    // ----------------------------------------------------------------------
+
+    entity AiAssetExternalRepo {
+        id                  : uuid;
+        asset_id            : uuid;          // FK -> AiAsset.id
+        source_type         : ProvenanceSourceType;
+        remote_url          : string;       // Git URL, dataset path, etc.
+        repo_owner          : string;       // GitHub org / user, or dataset owner
+        repo_name           : string;
+        default_branch      : string;
+        commit_hash         : string;
+        open_issues_count   : int;
+        stars_count         : int;
+        forks_count         : int;
+        last_sync_utc       : timestamp;
+        // Integrity / reproducibility
+        content_hash_sha256 : string;       // normalized asset content hash
+        build_script_path   : string;       // path to reproducible build / training script
+    }
+
+    // ----------------------------------------------------------------------
+    // 5. Provenance and licensing model
+    // ----------------------------------------------------------------------
+
+    entity AiAssetProvenance {
+        id                      : uuid;
+        asset_id                : uuid;          // FK -> AiAsset.id
+        source_type             : ProvenanceSourceType;
+        source_uri              : string;       // upstream dataset / model / repo
+        source_description      : string;
+        ingestion_method        : string;       // "manual_review", "auto_crawler", etc.[web:21][web:24]
+        ingestion_pipeline_id   : string;       // CI / ETL pipeline identifier
+        evidence_document_uri   : string;       // audit report / DPF, etc.[web:26][web:29]
+        created_at_utc          : timestamp;
+    }
+
+    entity AiAssetLicense {
+        id                          : uuid;
+        asset_id                    : uuid;         // FK -> AiAsset.id
+        license_name                : string;       // e.g. "Apache-2.0"
+        license_uri                 : string;       // canonical SPDX / text URI
+        license_class               : LicenseClass;
+        use_restriction             : LicenseUseRestriction;
+        attribution_requirement     : LicenseAttributionRequirement;
+        allows_derivatives          : bool;
+        allows_model_training       : bool;
+        allows_commercial_use       : bool;
+        most_restrictive_upstream   : bool;        // indicates propagated restriction[web:29]
+        notes                       : string;
+        created_at_utc              : timestamp;
+    }
+
+    // ----------------------------------------------------------------------
+    // 6. Faceted filters and discovery behavior
+    // ----------------------------------------------------------------------
+
+    behavior_tree AiAssetDiscoveryFacets {
+        root "ai_asset_discovery" {
+
+            branch "category" {
+                node "models"       -> filter(AiAsset.category == MODEL);
+                node "datasets"     -> filter(AiAsset.category == DATASET);
+                node "tooling"      -> filter(AiAsset.category == TOOLING);
+                node "pipelines"    -> filter(AiAsset.category == PIPELINE);
+                node "policies"     -> filter(AiAsset.category == POLICY);
+                node "evaluations"  -> filter(AiAsset.category == EVALUATION);
+            }
+
+            branch "modality" {
+                node "text"         -> filter(AiAsset.modality == TEXT);
+                node "vision"       -> filter(AiAsset.modality == VISION);
+                node "audio"        -> filter(AiAsset.modality == AUDIO);
+                node "multimodal"   -> filter(AiAsset.modality == MULTIMODAL);
+                node "biosignal"    -> filter(AiAsset.modality == BIOSIGNAL);
+            }
+
+            branch "safety" {
+                node "clinical_production" -> filter(AiAsset.safety_level == CLINICAL_PRODUCTION);
+                node "clinical_pilot"      -> filter(AiAsset.safety_level == CLINICAL_PILOT);
+                node "research"            -> filter(AiAsset.safety_level == RESEARCH);
+                node "experimental"        -> filter(AiAsset.safety_level == EXPERIMENTAL);
+            }
+
+            branch "licensing" {
+                node "permissive"          -> filter(AiAsset.license_class == PERMISSIVE);
+                node "copyleft"            -> filter(AiAsset.license_class == COPYLEFT);
+                node "proprietary"         -> filter(AiAsset.license_class == PROPRIETARY);
+                node "clinical_restricted" -> filter(AiAsset.license_class == CLINICAL_RESTRICTED);
+            }
+
+            branch "clinical_validation" {
+                node "clinically_validated" -> filter(AiAsset.is_clinically_validated == true);
+                node "public_discoverable"  -> filter(AiAsset.is_public_discoverable == true);
+            }
+
+            branch "device_profile" {
+                node "neuro_nanoswarm_v1"   -> filter(AiAsset.device_profile == "neuro_nanoswarm_v1");
+                node "edge_fpga"            -> filter(AiAsset.interface_profile == EMBEDDED_FPGA);
+            }
+        }
+    }
+
+    // ----------------------------------------------------------------------
+    // 7. Service surface: registration, mapping, and search
+    // ----------------------------------------------------------------------
+
+    service UnifiedAiAssetRegistry {
+
+        op register_asset(
+            asset       : AiAsset,
+            license     : AiAssetLicense,
+            provenance  : AiAssetProvenance,
+            repos       : list<AiAssetExternalRepo>
+        ) -> AiAsset {
+            // Core guardrails from governance best practices[web:21][web:24][web:29]
+            require asset.ops_threshold_tops >= REGISTRY_MIN_QPU_TOPS;
+            require asset.latency_budget_ms  <= REGISTRY_LATENCY_BUDGET_MS;
+            require length(asset.name)       > 0;
+            require length(license.license_name) > 0;
+            require length(license.license_uri)  > 0;
+            require license.allows_model_training == true
+                    or asset.category != MODEL;
+        }
+
+        op update_asset(
+            asset       : AiAsset
+        ) -> AiAsset {
+            require asset.id != null;
+        }
+
+        op map_external_repo(
+            asset_id    : uuid,
+            repo        : AiAssetExternalRepo
+        ) -> AiAssetExternalRepo {
+            require repo.asset_id == asset_id;
+            require length(repo.remote_url) > 0;
+        }
+
+        op attach_provenance(
+            asset_id    : uuid,
+            provenance  : AiAssetProvenance
+        ) -> AiAssetProvenance {
+            require provenance.asset_id == asset_id;
+        }
+
+        op attach_license(
+            asset_id    : uuid,
+            license     : AiAssetLicense
+        ) -> AiAssetLicense {
+            require license.asset_id == asset_id;
+        }
+
+        op search_assets(
+            text_query          : optional string,
+            categories          : optional list<AssetCategory>,
+            modalities          : optional list<Modality>,
+            safety_levels       : optional list<SafetyLevel>,
+            license_classes     : optional list<LicenseClass>,
+            device_profiles     : optional list<string>,
+            tags                : optional list<string>,
+            only_public         : optional bool,
+            only_clinical       : optional bool
+        ) -> list<AiAsset> {
+            // Implemented by backing SQL / engine; parameters directly map to facets.[web:27][web:30]
+        }
+    }
+}
