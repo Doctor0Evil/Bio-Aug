@@ -1,0 +1,22 @@
+[package]
+name = "bioaug-biomech-guards"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+description = "Reference biomechanical augmentation safety guards derived from BioAug ALN profiles."
+authors = ["Bio-Aug Contributors <security@bio-aug.example>"]
+repository = "https://github.com/Doctor0Evil/Bio-Aug"
+
+[dependencies]
+anyhow = "1.0"
+aln-guard-codegen = { path = "../aln-guard-codegen" }
+proptest = { version = "1.0", optional = true }
+
+[features]
+community = []
+clinical-le = []
+
+[lib]
+name = "bioaug_biomech_guards"
+path = "src/lib.rs"
+crate-type = ["rlib"]

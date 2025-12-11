@@ -6,9 +6,11 @@ ALN_DIR="aln_specs"
 FAIL=0
 for f in "$ALN_DIR"/*.aln; do
   echo "Validating $f"
-  # Use aln-cli to validate entirely if available
-  if [[ -x "aln-cli/target/release/aln" ]]; then
-    aln-cli/target/release/aln validate "$f" --profile bioaug-clinical || { echo "aln-cli validation failed for $f"; FAIL=1; }
+  # Use tools/find_aln.sh to discover aln binary, or allow ALN_BIN override
+  SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  : "${ALN_BIN:=$(sh "$SCRIPT_DIR/../tools/find_aln.sh")}"
+  if [[ -x "$ALN_BIN" ]]; then
+    "$ALN_BIN" validate "$f" --profile bioaug-clinical || { echo "aln-cli validation failed for $f"; FAIL=1; }
   fi
   # Check for required invariants
   if ! grep -q "invariant inv.NO_REMOTE_EXEC" "$f"; then

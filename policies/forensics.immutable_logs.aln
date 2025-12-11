@@ -1,10 +1,13 @@
-policy forensics.immutable_logs {
-  traceability {
-    hazard_id       = 'HAZ-AI-FORENSICS-001'
-    iso14971_clause = '7.4,7.5,9.2'
-    iec62304_class  = 'C'
-    rationale       = 'Maintain immutable, signed forensic chains for AI/agent incidents'
-    dpia            = true
-  }
-  condition { signed_immutable_log && chain_of_custody && zero_trust_export }
-}
+aln system BioAugPolicies {
+  policy forensics_immutable_logs {
+    dpia: true;
+    traceability {
+      hazard_id: "HAZ-AI-FORENSICS-001";
+      iso14971_clause: "7.4,7.5,9.2";
+      iec62304_class: "C";
+      rationale: "Ensure forensic trails for AI/agentic DoS or misuse incidents remain intact and auditable";
+    }
+    tags: ["forensics","logging","immutable"];
+    rule enforce: use_signed_immutable_log && chain_of_custody && zero_trust_export;
+  } end policy
+} end system

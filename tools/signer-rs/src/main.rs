@@ -14,6 +14,7 @@ use tar::Builder as TarBuilder;
 use flate2::Compression;
 use flate2::write::GzEncoder;
 use tempfile::NamedTempFile;
+use std::process::Command;
 
 #[derive(StructOpt)]
 enum Cmd {
@@ -40,6 +41,12 @@ enum Cmd {
     GenerateDevKeys {
         #[structopt(parse(from_os_str))]
         output: PathBuf,
+    },
+    ExportJwk {
+        #[structopt(parse(from_os_str))]
+        pubkey: PathBuf,
+        #[structopt(long, parse(from_os_str))]
+        output: Option<PathBuf>,
     },
 }
 
@@ -94,6 +101,33 @@ fn sign_with_keyfile(pkcs8_bytes: &[u8], data: &[u8]) -> anyhow::Result<Vec<u8>>
     Ok(sig.as_ref().to_vec())
 }
 
+#[cfg(feature = "hsm")]
+fn sign_with_hsm(pkcs11_label: &str, pin: &str, module_path: &str, data: &[u8]) -> anyhow::Result<Vec<u8>> {
+    use std::process::Command;
+    use tempfile::NamedTempFile;
+    let mut dataf = NamedTempFile::new()?; dataf.write_all(data)?; let in_path = dataf.path().to_str().unwrap().to_string();
+    let out_temp = NamedTempFile::new()?; let out_path = out_temp.path().to_str().unwrap().to_string();
+    let module = module_path;
+    // Use pkcs11-tool to sign using label and pin; assume key id 01
+    let status = Command::new("pkcs11-tool")
+        .args(["--module", module, "--login", "--pin", pin, "--sign", "--label", pkcs11_label, "--id", "01", "--input-file", &in_path, "--output-file", &out_path])
+        .status()?;
+    if !status.success() { anyhow::bail!("pkcs11-tool sign failed") }
+    let mut f = File::open(out_path)?; let mut buf = Vec::new(); f.read_to_end(&mut buf)?;
+    Ok(buf)
+}
+
+#[cfg(feature = "hsm")]
+fn export_pubkey_from_hsm(pkcs11_label: &str, pin: &str, module_path: &str, out_file: &str) -> anyhow::Result<()> {
+    use std::process::Command;
+    // Read object and write public key PEM file using `pkcs11-tool` or `openssl` wrapper
+    let status = Command::new("pkcs11-tool")
+        .args(["--module", module_path, "--login", "--pin", pin, "--read-object", "--type", "pubkey", "--label", pkcs11_label, "--output-file", out_file])
+        .status()?;
+    if !status.success() { anyhow::bail!("pkcs11-tool read-public-key failed") }
+    Ok(())
+}
+
 fn verify_with_pubkey(pubkey_bytes: &[u8], data: &[u8], sig: &[u8]) -> anyhow::Result<bool> {
     let public_key = UnparsedPublicKey::new(&ED25519, pubkey_bytes);
     Ok(public_key.verify(data, sig).is_ok())
@@ -134,7 +168,20 @@ fn main() -> anyhow::Result<()> {
                     };
             let sig = if let Some(kref) = keyref {
                 if kref.starts_with("hsm://") {
-                    anyhow::bail!("HSM signing not implemented in this environment; fallback to file keyref")
+                    // hsm://<label>:<pin> - uses pkcs11-tool under the hood
+                    #[cfg(feature = "hsm")]
+                    {
+                        let rest = &kref[6..];
+                        let parts: Vec<&str> = rest.split(':').collect();
+                        if parts.len() != 2 { anyhow::bail!("Invalid HSM keyref format. expected hsm://label:pin") }
+                        let label = parts[0]; let pin = parts[1];
+                        let module = std::env::var("PKCS11_MODULE").unwrap_or_else(|_| "/usr/lib/softhsm/libsofthsm2.so".to_string());
+                        sign_with_hsm(label, pin, &module, &h)?
+                    }
+                    #[cfg(not(feature = "hsm"))]
+                    {
+                        anyhow::bail!("HSM signing not implemented in this build; compile with --features hsm")
+                    }
                 } else {
                     // assume file
                     let mut key_file = File::open(kref)?;
@@ -267,13 +314,24 @@ fn main() -> anyhow::Result<()> {
                     let s_hash = sitem["hash"].as_str().unwrap_or("");
                     if hex_hash != s_hash { anyhow::bail!("ALN content hash mismatch for signature entry"); }
                 if let Some(kref) = keyref {
-                            if kref.starts_with("hsm://") {
-                                // TODO: Implement HSM/PKCS#11 support using cryptoki or pkcs11 crate.
-                                // In production, sign via HSM and never expose private keys in CI or repo.
-                                anyhow::bail!("HSM signing not implemented in this environment; fallback to file keyref")
-                            println!("ALN signature OK for {}", input.display());
-                            verified_any = true; break;
-                        } else { anyhow::bail!("ALN signature invalid"); }
+                    if kref.starts_with("hsm://") {
+                        #[cfg(feature = "hsm")]
+                        {
+                            let rest = &kref[6..];
+                            let parts: Vec<&str> = rest.split(':').collect();
+                            if parts.len() != 2 { anyhow::bail!("Invalid HSM keyref format. expected hsm://label:pin") }
+                            let label = parts[0]; let pin = parts[1];
+                            let module = std::env::var("PKCS11_MODULE").unwrap_or_else(|_| "/usr/lib/softhsm/libsofthsm2.so".to_string());
+                            let pubtemp = NamedTempFile::new()?; let out_path = pubtemp.path().to_str().unwrap().to_string();
+                            export_pubkey_from_hsm(label, pin, &module, &out_path)?;
+                            let mut fpub = File::open(out_path)?; let mut pubbuf = Vec::new(); fpub.read_to_end(&mut pubbuf)?;
+                            if verify_with_pubkey(&pubbuf, &h, &sig_bytes)? {
+                                println!("ALN signature OK for {}", input.display()); verified_any = true; break;
+                            } else { anyhow::bail!("ALN signature invalid") }
+                        }
+                        #[cfg(not(feature = "hsm"))]
+                        { anyhow::bail!("HSM verification not implemented in this build; compile with --features hsm") }
+                    } else { anyhow::bail!("ALN signature invalid"); }
                 } else { anyhow::bail!("No keyref provided for ALN verification"); }
                 if verified_any { return Ok(()) } else { anyhow::bail!("No valid signatures verified") }
             }
@@ -322,6 +380,23 @@ fn main() -> anyhow::Result<()> {
         Cmd::GenerateDevKeys { output } => {
             generate_dev_keys(&output)?;
             println!("Generated dev keys at {}", output.display());
+        }
+        Cmd::ExportJwk { pubkey, output } => {
+            // Read raw public key bytes and output a JWK for Ed25519
+            let mut f = File::open(&pubkey)?; let mut buf = Vec::new(); f.read_to_end(&mut buf)?;
+            // base64url without padding
+            let x = general_purpose::URL_SAFE_NO_PAD.encode(&buf);
+            let jwk = serde_json::json!({
+                "kty": "OKP",
+                "crv": "Ed25519",
+                "x": x
+            });
+            if let Some(out) = output {
+                let mut of = File::create(&out)?; of.write_all(serde_json::to_string_pretty(&jwk)?.as_bytes())?;
+                println!("Wrote JWK -> {}", out.display());
+            } else {
+                println!("{}", serde_json::to_string_pretty(&jwk)?);
+            }
         }
     }
     Ok(())

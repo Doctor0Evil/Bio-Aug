@@ -140,3 +140,24 @@ Bio‑Aug commits to the following public principles: [file:1]
 - Governance, not secret code, is the ultimate arbiter of acceptable augmentation behavior.
 
 By adhering to these commitments, Bio‑Aug seeks to help establish a safer, fairer frontier of human evolution, where advanced augmentations and AI integrations serve people without compromising their dignity, autonomy, or security. [file:1][file:5]
+
+---
+
+## Daily Research & Guard Generation (Dev / CI convenience)
+
+This repository includes a set of daily research cycle scripts that scaffold ALN profiles, generate typed Rust guard crates, and provide Prometheus metric templates for daily research snapshots and CI automation.
+
+Scripts are available under `tools/`:
+- `tools/daily_research_cycle.sh` — Daily biomech/BCI profile and guards generation.
+- `tools/daily_cybernetic_cycle.sh` — Rotating cybernetic domain daily generator (BCI, nanoswarm, neuromorphic, smart-city).
+- `tools/daily_adjacent_cycle.sh` — Adjacent-domain generator (implantable, organic, soft robotics, cyber-immune).
+
+Usage (on a dev machine or CI runner with `aln-cli` and `jq`/`sha256sum` installed):
+
+```bash
+./tools/daily_research_cycle.sh
+./tools/daily_cybernetic_cycle.sh
+./tools/daily_adjacent_cycle.sh
+```
+
+Each script writes its artifacts under `aln-reference/`, `generated/`, and `research-logs/` and emits Prometheus examples under `prometheus/`.

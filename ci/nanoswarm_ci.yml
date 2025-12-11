@@ -1,0 +1,32 @@
+name: Nanoswarm Write CI
+
+on:
+  push:
+    paths:
+      - 'crates/nanoswarm-write-api/**'
+      - 'crates/nanoswarm-edge-adapter/**'
+      - 'aln-reference/nanoswarm/**'
+  pull_request:
+    paths:
+      - 'crates/nanoswarm-write-api/**'
+      - 'crates/nanoswarm-edge-adapter/**'
+      - 'aln-reference/nanoswarm/**'
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+      - name: Build nanoswarm crates
+        run: |
+          cargo build -p nanoswarm-write-api --manifest-path crates/nanoswarm-write-api/Cargo.toml
+          cargo build -p nanoswarm-edge-adapter --manifest-path crates/nanoswarm-edge-adapter/Cargo.toml
+      - name: Test nanoswarm crates
+        run: |
+          cargo test -p nanoswarm-write-api --manifest-path crates/nanoswarm-write-api/Cargo.toml
+          cargo test -p nanoswarm-edge-adapter --manifest-path crates/nanoswarm-edge-adapter/Cargo.toml

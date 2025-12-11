@@ -1,0 +1,31 @@
+# Inside tools/daily_adjacent_cycle.sh, replace:
+#   GEN_DIR="generated/adjacent/${DATE_TAG}"
+#   mkdir -p "${GEN_DIR}"
+#   GUARDS_RS="${GEN_DIR}/cyberaug_adjacent_${DATE_TAG}_guards.rs"
+#   "${ALN_BIN}" GuardCodegen ... --out "${GUARDS_RS}"
+#
+# With:
+GEN_DIR="adjacent-cyberaug-guards-${DATE_TAG}/src/generated"
+mkdir -p "${GEN_DIR}"
+GUARDS_RS="${GEN_DIR}/cyberaug_adjacent_${DATE_TAG}_guards.rs"
+
+"${ALN_BIN}" GuardCodegen \
+  "${ALN_FILE}" \
+  --module "cyberaug_adjacent_${DATE_TAG}_guards" \
+  --out "${GUARDS_RS}"
+
+# And update lib.rs generation to:
+cat > "${CRATE_DIR}/src/lib.rs" << RS_EOF
+pub mod generated;
+
+pub use generated::*;
+RS_EOF
+
+cat > "${CRATE_DIR}/src/generated/mod.rs" << RS_EOF
+include!("cyberaug_adjacent_${DATE_TAG}_guards.rs");
+RS_EOF
+
+# Apply the same pattern to:
+# - tools/daily_research_cycle.sh (GEN_DIR="daily-guards-${DATE_TAG}/src/generated")
+# - tools/daily_cybernetic_cycle.sh (GEN_DIR="daily-cyberaug-guards-${DATE_TAG}/src/generated")
+# This keeps include! paths crate-local and publish-safe.

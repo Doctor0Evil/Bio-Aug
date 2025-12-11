@@ -1,10 +1,16 @@
-policy zero_trust_bci_kernel {
-  traceability {
-    hazard_id       = 'HAZ-ZT-BCI-001'
-    iso14971_clause = '7.4,7.5'
-    iec62304_class  = 'C'
-    rationale       = 'Layered zero-trust controls for neuromorphic/BCI safety fabric'
-    dpia            = true
-  }
-  condition { microsegmentation && rbac_strict && anomaly_detectors && D_ge_0_99 }
-}
+aln system BioAugPolicies {
+  policy zero_trust_bci_kernel {
+    dpia: true;
+    traceability {
+      hazard_id: "HAZ-ZT-001";
+      iso14971_clause: "7.4";
+      iec62304_class: "C";
+      rationale: "Enforce zero-trust policies for neuromorphic BCI kernel components";
+    }
+    tags: ["zero-trust","bci-kernel"];
+    microsegmentation strict;
+    rbac profile: "clinical-minimum";
+    detectors: ["anomaly","budget","rbac","network"];
+    rule enforce: require_microsegmentation && require_rbac && require_anomaly_detection;
+  } end policy
+} end system

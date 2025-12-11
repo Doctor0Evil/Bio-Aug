@@ -1,10 +1,13 @@
-policy wasm.policy_signature_gate {
-  traceability {
-    hazard_id       = 'HAZ-CONFIG-TAMPER-001'
-    iso14971_clause = '7.4'
-    iec62304_class  = 'C'
-    rationale       = 'Block unsigned / profile-mismatched policies from entering WASM sandbox'
-    dpia            = true
-  }
-  condition { sidecar_sig_present && verify_clinical && verify_security && profile_match }
-}
+aln system BioAugPolicies {
+  policy wasm_policy_signature_gate {
+    dpia: true;
+    traceability {
+      hazard_id: "HAZ-CONFIG-TAMPER-001";
+      iso14971_clause: "7.4";
+      iec62304_class: "C";
+      rationale: "Prevent unsigned or mismatched-profile policies from entering the WASM sandbox";
+    }
+    tags: ["config","wasm_sandbox"];
+    rule enforce: require_sidecar_sig_json && verify(CLINICAL_POLICY) && verify(SECURITY_POLICY) && profile_match;
+  } end policy
+} end system

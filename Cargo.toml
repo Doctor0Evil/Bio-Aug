@@ -1,14 +1,42 @@
 [workspace]
 members = [
-    "aln-syntax",
-    "aln-check",
-    "aln-codegen",
-    "aln-cli",
     "tools/signer-rs",
-    "sim/runner",
+    "aln-cli",
+    "aln-guard-codegen",
+    "biomech-guards",
+    "anti_riot_runtime",
+    "augment-governance",
+    "crates/nanoswarm-write-api",
+    "crates/nanoswarm-edge-adapter",
 ]
 
-[package]
-name = "bio-aug-root"
-version = "0.1.0"
-edition = "2021"
+resolver = "2"
+
+[workspace.metadata.bioaug]
+public_crates = [
+    "aln-syntax",
+    "aln-guard-codegen",
+    "aln-cli",
+    "bioaug-biomech-guards",
+    "anti_riot_runtime"
+]
+restricted_crates = [
+    "augment-governance",
+    "tools/signer-rs",
+    "restricted-*"
+]
+
+[features]
+# Default: safe for any public-sector / general-use environment.
+community-default = [
+    "aln-cli/community",
+    "aln-guard-codegen/community",
+    "bioaug-biomech-guards/community"
+]
+# Restricted, policy-heavy build: only for approved sites.
+clinical-le = [
+    "aln-cli/clinical-le",
+    "augment-governance/le-policy",
+    "tools/signer-rs/hsm"
+]
+

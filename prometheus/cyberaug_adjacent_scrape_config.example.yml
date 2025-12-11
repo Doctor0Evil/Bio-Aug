@@ -1,0 +1,8 @@
+scrape_configs:
+  - job_name: "cyberaug-adjacent-nodes"
+    static_configs:
+      - targets:
+          - "cyberaug-adj-node-1:9101"
+          - "cyberaug-adj-node-2:9101"
+        labels:
+          profile: "adjacent"

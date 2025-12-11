@@ -1,0 +1,15 @@
+# HELP nanoswarm_write_requests_total Total number of nanoswarm write requests received.
+# TYPE nanoswarm_write_requests_total counter
+nanoswarm_write_requests_total{target="session_note"} 0
+
+# HELP nanoswarm_write_rejects_total Total number of nanoswarm write rejects.
+# TYPE nanoswarm_write_rejects_total counter
+nanoswarm_write_rejects_total{reason="invariant_violation"} 0
+
+# HELP nanoswarm_write_success_total Total number of successful nanoswarm writes.
+# TYPE nanoswarm_write_success_total counter
+nanoswarm_write_success_total{target="session_note"} 0
+
+# HELP nanoswarm_write_latency_ms_last Last observed nanoswarm write latency in ms.
+# TYPE nanoswarm_write_latency_ms_last gauge
+nanoswarm_write_latency_ms_last{target="session_note"} 0.0

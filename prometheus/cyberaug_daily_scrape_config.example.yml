@@ -1,0 +1,8 @@
+scrape_configs:
+  - job_name: "cyberaug-daily-nodes"
+    static_configs:
+      - targets:
+          - "cyberaug-node-1:9100"
+          - "cyberaug-node-2:9100"
+        labels:
+          profile: "daily"

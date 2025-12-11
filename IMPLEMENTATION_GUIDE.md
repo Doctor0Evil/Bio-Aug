@@ -50,6 +50,11 @@ cd aln-cli && cargo build --release
 ./aln-cli/target/release/aln validate aln-examples/AU.BioMesh.NetEnvelope.v1.aln --profile bioaug-clinical
 # Codegen (placeholder)
 cd aln-cli && ./target/release/aln codegen rust --in aln-examples/AU.BioMesh.NetEnvelope.v1.aln --out generated
+# Guard codegen: generate Rust guard module from ALN invariants
+cd aln-cli && ./target/release/aln GuardCodegen aln-examples/AU.BioMesh.NetEnvelope.v1.aln --module bioaug_guards --out generated/bioaug_guards.rs
+## Biomechanical augmentation reference
+The repository includes a biomechanical augmentation reference pack under `aln-reference/biomech-augmentation` with ALN profiles, guard bindings, and a manifest; a reference crate (`biomech-guards`) is provided with generated code included.
+Use the `bioaug_biomech_guard` workflow to regenerate and sign the pack in CI.
     pulse_width_us_range 50-250
     frequency_hz_range 5-25
   actuators

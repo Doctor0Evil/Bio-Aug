@@ -1,0 +1,8 @@
+scrape_configs:
+  - job_name: "bioaug-daily-nodes"
+    static_configs:
+      - targets:
+          - "bioaug-node-1:9100"
+          - "bioaug-node-2:9100"
+        labels:
+          profile: "daily"
