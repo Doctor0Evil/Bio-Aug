@@ -1,0 +1,641 @@
+; =====================================================================
+; Bio‑Aug: Biocompatible Autonomy & Security Layer for Augmented Users
+; High‑fidelity ALN profile + guards, aligned to repo spec and threat model
+; =====================================================================
+
+profile BioAug.Core.BiocompatibleAutonomySecurityLayer v1.0.0 {
+    meta {
+        id              = "bioaug.core.autonomy.security.v1"
+        label           = "Bio‑Aug: Biocompatible Autonomy & Security Layer"
+        owner_entity    = "AugmentedUser"
+        jurisdiction    = ["US", "EU", "Global-Medical"]
+        criticality     = "life_safety"
+        description     = """
+        Bio‑Aug is a non‑wearable, non‑external biomechanical security and control layer
+        for AI‑integrated, cybernetic, and augmented humans, designed to prevent digital
+        malware, hostile code, or governance failures from influencing biomechanical,
+        neuromorphic, or cybernetic layers while preserving autonomy, rights, and
+        public accountability. [file:1][file:5]
+        """
+        repo {
+            url         = "https://github.com/Doctor0Evil/Bio-Aug"
+            branch      = "main"
+            compliance  = ["research-grade", "public-auditable"]
+        }
+        versioning {
+            semver          = "1.0.0"
+            schema_version  = "aln.profile/1.0"
+            last_updated    = "2025-12-26T19:17:00-07:00"
+            authors         = ["Dr. Jacob Scott Farmer"]
+            license         = "AGPL-3.0-or-later"
+        }
+        provenance {
+            signed_by       = ["dr.jacob.scott.farmer@bio-aug.local"]
+            signing_method  = "ed25519"
+            ledger_anchor   = "ledger://bioaug/mainnet/profiles/bioaug.core.autonomy.security.v1"
+        }
+    }
+
+    ; -----------------------------------------------------------------
+    ; Layer model: strict hard‑separation with explicit gateways
+    ; -----------------------------------------------------------------
+    domain_layers {
+        biological {
+            id          = "bio.layer"
+            label       = "Biological Layer"
+            scope       = ["cells", "tissue", "organs", "nervous-system"]
+            interfaces  = ["bio-sensors", "bio-actuators", "clinical-io"]
+        }
+
+        cybernetic {
+            id          = "cyb.layer"
+            label       = "Cybernetic / Mechanical Layer"
+            scope       = ["implants", "prosthetics", "exoskeletons",
+                           "neuromorphic-chips", "organ-support"]
+            interfaces  = ["bci-bus", "implant-can-bus", "haptic-bus"]
+        }
+
+        digital {
+            id          = "dig.layer"
+            label       = "Digital / AI Layer"
+            scope       = ["models", "control-code", "edge-nodes",
+                           "cloud-services", "nanoswarm-fleets"]
+            interfaces  = ["api-gateways", "model-rpc", "telemetry"]
+        }
+
+        metaphysical {
+            id          = "meta.layer"
+            label       = "Metaphysical / Simulated Layer"
+            scope       = ["VR", "AR", "MR", "metaphysical-simulations",
+                           "digital-twins"]
+            interfaces  = ["xr-pipelines", "sim-time-streams"]
+        }
+    }
+
+    cross_layer_policy HardSeparation v1 {
+        id          = "policy.crosslayer.hardseparation.v1"
+        description = """
+        Enforces strict separation between biological, cybernetic, digital, and
+        metaphysical layers, with all cross‑layer flows mediated by explicit,
+        human‑approved gateways and quarantine rules. [file:1][file:5]
+        """
+
+        gateway BioToCyber {
+            id              = "gateway.bio_to_cyber.v1"
+            from_layer      = "bio.layer"
+            to_layer        = "cyb.layer"
+            mode            = "readonly-bio / bounded-cyb"
+            allowed_intents = ["diagnostic", "therapeutic", "safety-shutdown"]
+            guards          = ["Guard.Med.BiocompatibleFirst",
+                                "Guard.Sec.NoDarkChannels",
+                                "Guard.Rights.ConsentRequired"]
+            telemetry {
+                enabled     = true
+                channels    = ["prometheus", "syslog-structured"]
+                labels      = ["bioaug", "gateway", "bio-to-cyb"]
+            }
+        }
+
+        gateway CyberToDigital {
+            id              = "gateway.cyber_to_digital.v1"
+            from_layer      = "cyb.layer"
+            to_layer        = "dig.layer"
+            mode            = "telemetry-up / command-down-via-guards"
+            allowed_intents = ["status-stream", "policy-query", "guarded-command"]
+            guards          = ["Guard.Sec.ImmutableSafetyKernel",
+                                "Guard.Sec.NoInternetDirectControl",
+                                "Guard.Rights.AuditLogMandatory"]
+            telemetry {
+                enabled     = true
+                channels    = ["prometheus", "syslog-structured"]
+                labels      = ["bioaug", "gateway", "cyb-to-dig"]
+            }
+        }
+
+        gateway DigitalToMetaphysical {
+            id              = "gateway.digital_to_metaphysical.v1"
+            from_layer      = "dig.layer"
+            to_layer        = "meta.layer"
+            mode            = "simulated-only"
+            allowed_intents = ["simulation", "training", "explainability"]
+            guards          = ["Guard.Sim.NoRealityWritebackWithoutReview"]
+            telemetry {
+                enabled     = true
+                channels    = ["prometheus", "syslog-structured"]
+                labels      = ["bioaug", "gateway", "dig-to-meta"]
+            }
+        }
+
+        ; Any attempt to bypass declared gateways is a violation.
+        invariant NoUndeclaredCrossLayerPaths {
+            id          = "invariant.crosslayer.no_undeclared_paths"
+            expression  = """
+            forall flow in observed_flows:
+                flow.path not_in declared_gateways
+                -> raise(Quarantine.CrossLayerBreach)
+            """
+            severity    = "critical"
+            log_channel = "security"
+            metrics {
+                prometheus_key = "bioaug_crosslayer_breach_total"
+                labels         = ["severity", "layer_from", "layer_to"]
+            }
+        }
+    }
+
+    ; -----------------------------------------------------------------
+    ; Rights and autonomy for augmented individuals
+    ; -----------------------------------------------------------------
+    entity AugmentedIndividual v1 {
+        id_field    = "subject_id"
+        storage     = "kv://bioaug/subjects"
+        attributes  = ["legal_name", "preferred_name", "jurisdiction",
+                       "consent_profile_id", "critical_implants"]
+
+        rights {
+            NonIntrusionPhysicalSafety {
+                id   = "right.non_intrusion_physical_safety"
+                text = "Right to non‑intrusion and physical safety of the body
+                        and augmentations. [file:1][file:5]"
+                enforced_by = ["Guard.Saf.FailsafeShutdown",
+                                "Guard.Sec.NoInternetDirectControl"]
+            }
+
+            TransparencyExplainability {
+                id   = "right.transparency_explainability"
+                text = "Right to full transparency and explainability of
+                        augmentation behavior, policies, and external influences.
+                        [file:1][file:5]"
+                enforced_by = ["Guard.Rights.AuditLogMandatory",
+                                "Guard.Rights.IntrospectConfig"]
+            }
+
+            ConsentOptOutShutdown {
+                id   = "right.consent_optout_shutdown"
+                text = "Right to consent, opt‑out, and total shutdown of
+                        non‑critical augmentations, with medically safe modes
+                        for critical implants. [file:1][file:5]"
+                enforced_by = ["Guard.Rights.ConsentRequired",
+                                "Guard.Saf.ClinicalGracefulDegrade"]
+            }
+
+            AuditAndHistoryAccess {
+                id   = "right.audit_and_history_access"
+                text = "Right to access audit logs, configuration history, and
+                        records of external control attempts. [file:1][file:5]"
+                enforced_by = ["Guard.Rights.ExportAuditBundle"]
+            }
+        }
+    }
+
+    ; -----------------------------------------------------------------
+    ; Threat model and structural malware immunity
+    ; -----------------------------------------------------------------
+    threat_model BioAug.Threats v1 {
+        id = "threatmodel.bioaug.core.v1"
+
+        assumes {
+            NetworkMalware {
+                id      = "assume.network_malware"
+                vectors = ["viruses", "worms", "botnets", "ransomware"]
+                note    = "Network‑borne malware is present in adjacent systems
+                           and networks. [file:1][file:4]"
+            }
+
+            SupplyChainFirmwareCompromise {
+                id      = "assume.supplychain_firmware_compromise"
+                vectors = ["firmware-backdoors", "malicious-updates",
+                           "compromised-bootloaders"]
+                note    = "Firmware and supply‑chain compromise attempts are
+                           assumed possible. [file:1][file:4]"
+            }
+
+            AdversarialMLAndPromptAttacks {
+                id      = "assume.adversarial_ml_and_prompt"
+                vectors = ["prompt-injection", "policy-circumvention",
+                           "adversarial-inputs"]
+                note    = "AI models may be subject to adversarial or prompt‑level
+                           manipulation. [file:1][file:4]"
+            }
+
+            CrossLayerExploits {
+                id      = "assume.crosslayer_exploits"
+                vectors = ["cloud-to-bci-bridge", "sim-to-bio-writeback",
+                           "debug-backdoors"]
+                note    = "Attackers may try to bridge from cloud/service code
+                           into neuromorphic or biomechanical control. [file:1]"
+            }
+        }
+
+        mitigations {
+            ImmutableSafetyKernels {
+                id          = "mitigation.immutable_safety_kernels"
+                description = """
+                Biomechanical control logic is locked behind audit‑only,
+                tamper‑evident kernels with multi‑signature governance; kernels
+                cannot execute downloaded or unvetted code. [file:1][file:5]
+                """
+                enforced_by = ["Guard.Sec.ImmutableSafetyKernel"]
+            }
+
+            CrossLayerQuarantine {
+                id          = "mitigation.crosslayer_quarantine"
+                description = """
+                Any unauthorized digital→biomechanical transition triggers
+                quarantine, shutdown, and forensic capture. [file:1][file:5]
+                """
+                enforced_by = ["Guard.Sec.CrossLayerQuarantine"]
+            }
+
+            SafeRemovalRollback {
+                id          = "mitigation.safe_removal_rollback"
+                description = """
+                Hazardous or non‑compliant modules can be removed or disabled
+                through auditable workflows anchored to a trusted ledger, with
+                a defined path back to safe states. [file:1][file:4]
+                """
+                enforced_by = ["Guard.Saf.SafeRemovalRollback"]
+            }
+
+            NoDarkChannels {
+                id          = "mitigation.no_dark_channels"
+                description = """
+                Hidden debug interfaces, private backdoors, and undocumented
+                overrides are policy violations, not features. [file:1]
+                """
+                enforced_by = ["Guard.Sec.NoDarkChannels"]
+            }
+        }
+    }
+
+    ; -----------------------------------------------------------------
+    ; Guard definitions -> compiled into Rust crates + Prometheus metrics
+    ; -----------------------------------------------------------------
+    guards {
+        guard Guard.Med.BiocompatibleFirst v1 {
+            kind        = "precondition"
+            layer_scope = ["bio.layer", "cyb.layer"]
+            description = """
+            Verifies medical biocompatibility, tissue safety, and reversible‑as‑possible
+            integration before any digital/AI control channel is enabled. [web:1][file:1]
+            """
+            inputs  = ["implant_manifest", "clinical_clearance", "risk_profile"]
+            outputs = ["biocompatible = bool"]
+            check   = """
+            implant_manifest.status == "approved" &&
+            clinical_clearance.state == "valid" &&
+            risk_profile.level in ["low", "medium"]
+            """
+            on_fail = ["block_control_enable", "notify.clinical_team",
+                       "flag.compliance_hold"]
+            metrics {
+                prometheus_key = "bioaug_guard_biocompatiblefirst_fail_total"
+                labels         = ["implant_type", "jurisdiction"]
+            }
+        }
+
+        guard Guard.Sec.ImmutableSafetyKernel v1 {
+            kind        = "integrity"
+            layer_scope = ["cyb.layer"]
+            description = """
+            Ensures biomechanical control primitives are only serviced by
+            immutable, signed, tamper‑evident kernels; no runtime code loading
+            is allowed. [file:1][file:5]
+            """
+            inputs  = ["kernel_hash", "expected_hash", "signatures[]"]
+            check   = """
+            kernel_hash == expected_hash &&
+            signatures.count_valid >= 2
+            """
+            on_fail = ["enter.safe_mode", "disable.motion_commands",
+                       "open.forensic_case"]
+            metrics {
+                prometheus_key = "bioaug_guard_immutable_safety_kernel_fail_total"
+                labels         = ["device_class"]
+            }
+        }
+
+        guard Guard.Sec.NoInternetDirectControl v1 {
+            kind        = "flow-control"
+            layer_scope = ["dig.layer", "cyb.layer"]
+            description = """
+            Blocks any path where internet‑originated or untrusted code attempts
+            to directly command in‑body biomechanical functions. [file:1][file:4]
+            """
+            inputs  = ["src_trust_level", "command_path"]
+            check   = """
+            not (src_trust_level == "internet" and
+                 command_path.targets == "biomech-primitive")
+            """
+            on_fail = ["raise(Quarantine.InternetDirectControlAttempt)",
+                       "log.security_event", "drop.command"]
+            metrics {
+                prometheus_key = "bioaug_guard_no_internet_direct_control_block_total"
+                labels         = ["src_region"]
+            }
+        }
+
+        guard Guard.Sec.CrossLayerQuarantine v1 {
+            kind        = "runtime-monitor"
+            layer_scope = ["dig.layer", "cyb.layer", "bio.layer"]
+            description = """
+            Detects unauthorized digital→biomechanical jumps and transitions
+            system into quarantined, clinically safe mode. [file:1][file:5]
+            """
+            inputs  = ["flow_descriptor"]
+            check   = """
+            flow_descriptor in authorized_flows
+            """
+            on_fail = ["enter.quarantine_mode", "freeze.noncritical_actuators",
+                       "snapshot.state_to_ledger"]
+            metrics {
+                prometheus_key = "bioaug_guard_crosslayer_quarantine_trigger_total"
+                labels         = ["reason"]
+            }
+        }
+
+        guard Guard.Sec.NoDarkChannels v1 {
+            kind        = "configuration"
+            layer_scope = ["cyb.layer", "dig.layer"]
+            description = """
+            Refuses configuration where any interface is unregistered, undocumented,
+            or lacks a mapped policy owner. [file:1]
+            """
+            inputs  = ["interface_inventory[]"]
+            check   = """
+            forall intf in interface_inventory:
+                intf.registered == true &&
+                intf.policy_owner != null
+            """
+            on_fail = ["block.boot", "report.engineering_governance"]
+            metrics {
+                prometheus_key = "bioaug_guard_no_dark_channels_violation_total"
+                labels         = ["interface_type"]
+            }
+        }
+
+        guard Guard.Rights.ConsentRequired v1 {
+            kind        = "rights-enforcement"
+            layer_scope = ["dig.layer", "cyb.layer"]
+            description = """
+            Requires explicit, revocable consent for non‑critical augmentations,
+            mapped to the subject’s consent profile. [file:1][file:5]
+            """
+            inputs  = ["subject_id", "operation", "consent_profile"]
+            check   = """
+            if operation.critical == false:
+                consent_profile.has_active(subject_id, operation.id)
+            else:
+                true
+            """
+            on_fail = ["deny.operation", "prompt.consent_flow",
+                       "log.consent_violation"]
+            metrics {
+                prometheus_key = "bioaug_guard_consent_required_violation_total"
+                labels         = ["operation_type", "jurisdiction"]
+            }
+        }
+
+        guard Guard.Rights.AuditLogMandatory v1 {
+            kind        = "logging"
+            layer_scope = ["dig.layer", "cyb.layer"]
+            description = """
+            Enforces immutable logging of configuration changes, high‑impact
+            commands, and external influence attempts. [file:1][file:5]
+            """
+            inputs  = ["event"]
+            check   = "event.has_persisted_record == true"
+            on_fail = ["halt.operation", "sync.recovery_queue",
+                       "alert.audit_authority"]
+            metrics {
+                prometheus_key = "bioaug_guard_auditlog_mandatory_violation_total"
+                labels         = ["event_class"]
+            }
+        }
+
+        guard Guard.Rights.IntrospectConfig v1 {
+            kind        = "introspection"
+            layer_scope = ["dig.layer", "cyb.layer"]
+            description = """
+            Enables augmented individuals and authorized reviewers to introspect
+            current policies, versions, and provenance. [file:1][file:5]
+            """
+            inputs  = ["subject_id", "requester_role"]
+            check   = """
+            requester_role in ["subject", "clinician", "regulator", "auditor"]
+            """
+            on_success = ["render.explainable_view"]
+        }
+
+        guard Guard.Rights.ExportAuditBundle v1 {
+            kind        = "export"
+            layer_scope = ["dig.layer"]
+            description = """
+            Provides exportable, human‑readable and machine‑readable audit bundles
+            for external review and appeals processes. [file:1]
+            """
+            inputs  = ["subject_id", "time_range"]
+            outputs = ["audit_bundle"]
+        }
+
+        guard Guard.Saf.FailsafeShutdown v1 {
+            kind        = "safety"
+            layer_scope = ["cyb.layer", "bio.layer"]
+            description = """
+            Provides clinically safe shutdown and neutral posture for non‑critical
+            augmentations in response to violations or user request. [file:1][file:5]
+            """
+            inputs  = ["subject_id", "shutdown_request"]
+            on_trigger = ["gradual_actuator_poweroff",
+                          "lock_to_safe_posture",
+                          "notify.clinical_team"]
+        }
+
+        guard Guard.Saf.SafeRemovalRollback v1 {
+            kind        = "lifecycle"
+            layer_scope = ["dig.layer", "cyb.layer"]
+            description = """
+            Orchestrates safe removal or rollback of hazardous modules, anchored
+            to a trusted ledger, guaranteeing a path back to a safe state. [file:1][file:4]
+            """
+            inputs  = ["module_id", "current_state", "target_state"]
+            on_trigger = ["write.change_proposal_to_ledger",
+                          "require.multi_sig",
+                          "execute.rollback_plan"]
+        }
+
+        guard Guard.Saf.ClinicalGracefulDegrade v1 {
+            kind        = "failover"
+            layer_scope = ["bio.layer", "cyb.layer"]
+            description = """
+            For critical implants, provides medically supervised graceful‑degrade
+            and fallback rather than abrupt shutdown. [file:1]
+            """
+            inputs  = ["implant_manifest", "clinical_plan"]
+            on_trigger = ["engage.clinical_fallback",
+                          "throttle.nonessential_functions"]
+        }
+
+        guard Guard.Sim.NoRealityWritebackWithoutReview v1 {
+            kind        = "sim-bridge"
+            layer_scope = ["meta.layer", "dig.layer", "cyb.layer"]
+            description = """
+            Prevents simulation or metaphysical outputs from being applied to
+            real biomechanical control without explicit, multi‑party review. [file:1]
+            """
+            inputs  = ["sim_run_id", "proposed_change"]
+            check   = """
+            proposed_change.review_state == "governance-approved"
+            """
+            on_fail = ["block.writeback", "flag.governance_violation"]
+        }
+    }
+
+    ; -----------------------------------------------------------------
+    ; Platform‑agnostic control integration (no wearables)
+    ; -----------------------------------------------------------------
+    platform_integration v1 {
+        requirement StrictNonBypassability {
+            id   = "requirement.strict_non_bypassability"
+            text = """
+            No platform may introduce a control path that circumvents the
+            Bio‑Aug biomechanical safety and rights enforcement layer. [file:1]
+            """
+            enforced_by = ["Guard.Sec.NoDarkChannels",
+                            "Guard.Sec.CrossLayerQuarantine"]
+        }
+
+        targets {
+            neuromorphic_chips {
+                buses       = ["spi", "i2c", "custom-neuro-bus"]
+                guard_sets  = ["Guard.Sec.ImmutableSafetyKernel",
+                               "Guard.Sec.NoInternetDirectControl"]
+            }
+
+            micro_actuators_sensor_meshes {
+                buses       = ["can", "ethercat", "haptic-mesh"]
+                guard_sets  = ["Guard.Saf.FailsafeShutdown",
+                               "Guard.Rights.ConsentRequired"]
+            }
+
+            realtime_engines {
+                engines     = ["UnrealEngine", "Unity", "Godot"]
+                use_cases   = ["simulation", "validation", "digital-twins"]
+                guard_sets  = ["Guard.Sim.NoRealityWritebackWithoutReview"]
+            }
+
+            medical_devices {
+                standards   = ["DICOM", "HL7", "FHIR", "IEEE-11073"]
+                guard_sets  = ["Guard.Med.BiocompatibleFirst",
+                               "Guard.Rights.AuditLogMandatory"]
+            }
+        }
+    }
+
+    ; -----------------------------------------------------------------
+    ; Governance and public commitments
+    ; -----------------------------------------------------------------
+    governance BioAug.Governance v1 {
+        id = "governance.bioaug.core.v1"
+
+        commitments {
+            NoSilentAutonomyReduction {
+                id   = "commitment.no_silent_autonomy_reduction"
+                text = """
+                No cybernetic or AI system may silently reduce human autonomy
+                or safety. [file:1]
+                """
+                linked_guards = ["Guard.Rights.ConsentRequired",
+                                 "Guard.Saf.FailsafeShutdown"]
+            }
+
+            NoInternetDirectBiomechCommand {
+                id   = "commitment.no_internet_direct_biomech_command"
+                text = """
+                No internet‑connected system may directly command in‑body
+                biomechanical functions without passing through the verified,
+                rights‑aware control plane. [file:1]
+                """
+                linked_guards = ["Guard.Sec.NoInternetDirectControl",
+                                 "Guard.Sec.CrossLayerQuarantine"]
+            }
+
+            EnforceablePolicyRights {
+                id   = "commitment.enforceable_policy_rights"
+                text = """
+                All affected persons have enforceable rights to understand,
+                contest, and reshape the policies that govern their
+                augmentations. [file:1][file:5]
+                """
+                linked_guards = ["Guard.Rights.IntrospectConfig",
+                                 "Guard.Rights.ExportAuditBundle"]
+            }
+
+            GovernanceOverSecretCode {
+                id   = "commitment.governance_over_secret_code"
+                text = """
+                Governance, not secret code, is the ultimate arbiter of
+                acceptable augmentation behavior. [file:1]
+                """
+                linked_guards = ["Guard.Sec.NoDarkChannels",
+                                 "Guard.Saf.SafeRemovalRollback"]
+            }
+        }
+
+        note = """
+        Bio‑Aug does not grant personhood to AI or cybernetic systems; they remain
+        bound to ethical and legal duties under human‑centric rights frameworks. [file:1]
+        """
+    }
+
+    ; -----------------------------------------------------------------
+    ; CI / research‑cycle hooks (aligned with tools/*.sh description)
+    ; -----------------------------------------------------------------
+    ci_hooks DailyResearchAndGuardGeneration v1 {
+        id = "ci.bioaug.daily_research_and_guard_generation.v1"
+
+        scripts {
+            biomech_bci_cycle {
+                id          = "ci.script.biomech_bci_cycle"
+                path        = "./tools/daily_research_cycle.sh"
+                description = "Daily biomech/BCI profile and guards generation. [file:1]"
+                outputs     = ["aln-reference/", "generated/", "research-logs/",
+                               "prometheus/biomech_metrics.prom"]
+                schedule    = "0 3 * * *"
+                runner      = "github-actions/self-hosted"
+            }
+
+            cybernetic_domain_cycle {
+                id          = "ci.script.cybernetic_domain_cycle"
+                path        = "./tools/daily_cybernetic_cycle.sh"
+                description = "Rotating cybernetic domain generator (BCI, nanoswarm, neuromorphic, smart-city). [file:1]"
+                outputs     = ["aln-reference/", "generated/", "research-logs/",
+                               "prometheus/cybernetic_metrics.prom"]
+                schedule    = "15 3 * * *"
+                runner      = "github-actions/self-hosted"
+            }
+
+            adjacent_domain_cycle {
+                id          = "ci.script.adjacent_domain_cycle"
+                path        = "./tools/daily_adjacent_cycle.sh"
+                description = "Adjacent domain generator (implantable, organic, soft-robotics, cyber-immune). [file:1]"
+                outputs     = ["aln-reference/", "generated/", "research-logs/",
+                               "prometheus/adjacent_metrics.prom"]
+                schedule    = "30 3 * * *"
+                runner      = "github-actions/self-hosted"
+            }
+        }
+
+        metrics {
+            prometheus {
+                namespace   = "bioaug"
+                files       = [
+                    "prometheus/biomech_metrics.prom",
+                    "prometheus/cybernetic_metrics.prom",
+                    "prometheus/adjacent_metrics.prom"
+                ]
+                scrape_hint = "scrape_interval=15s"
+            }
+        }
+    }
+}
